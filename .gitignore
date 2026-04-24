@@ -1,0 +1,40 @@
+# Build directories - only keep library files (.a/.so/.dylib/.lib/.dll)
+build/**
+!build/**/
+!build/**/*.a
+!build/**/*.so
+!build/**/*.dylib
+!build/**/*.lib
+!build/**/*.dll
+build-*/
+install/
+
+# Go
+*.test
+*.out
+*.prof
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# CMake
+
+# Coverage
+*.gcda
+*.gcno
+*.gcov
+coverage.out
+
+# Prebuilt libraries (optional, uncomment if not tracking)
+# prebuilt/
+
+# Test binaries

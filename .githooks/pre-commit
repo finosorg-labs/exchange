@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# platform pre-commit hook
+# Policy:
+# - Run strict checks only when committing on main branch.
+# - Skip on all other branches.
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+if [[ "${CURRENT_BRANCH}" != "main" ]]; then
+  echo "[pre-commit] Branch '${CURRENT_BRANCH}' is not main, skipping checks."
+  exit 0
+fi
+
+echo "[pre-commit] Running strict checks on main branch..."
+
+# Ensure we always execute from repository root
+cd "${ROOT_DIR}"
+
+# Stage 1: Build Linux native
+echo "[pre-commit] Stage 1/3: make linux"
+make linux
+
+# Stage 2: QA checks (static analysis)
+echo "[pre-commit] Stage 2/3: make qa"
+make qa
+
+# Stage 3: Go checks
+echo "[pre-commit] Stage 3/3: Go tests"
+echo "[pre-commit] - go vet"
+CGO_CFLAGS_ALLOW="-mavx.*|-msse.*|-mfma|-mavx512.*" go vet .
+
+echo "[pre-commit] - go test"
+CGO_CFLAGS_ALLOW="-mavx.*|-msse.*|-mfma|-mavx512.*" FC_BUILD_MODE=source go test -v .
+
+echo "[pre-commit] All strict checks passed."

@@ -1,0 +1,242 @@
+#
+# platform GitHub Actions CI Pipeline
+#
+#
+# All builds run on Linux (ubuntu-24.04) via cross-compilation toolchain.
+# Dependencies are installed per-job via composite action with apt caching.
+#
+# Build matrix:
+#   - Linux native: GCC + Clang, Release
+#   - Windows amd64: cross-compiled via MinGW-w64, Release
+#
+# Output structure (all under build/):
+#   build/linux_amd64/libfinkit_platform_static.a
+#   build/windows_amd64/libfinkit_platform_static.a
+#
+# Architecture:
+#   Stage 1 — Build:  Linux native + Windows cross-compile
+#   Stage 2 — QA:     Static analysis
+#   Stage 3 — Go:     Go module tests
+#
+
+name: platform CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # =========================================================================
+  # Stage 1a — Linux native build (Release, GCC + Clang)
+  # =========================================================================
+
+  linux-build:
+    name: Linux / ${{ matrix.compiler }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          c-build: 'true'
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.compiler }}
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+        run: |
+          cmake -B build/linux_amd64 \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/linux_amd64 --parallel
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64-${{ matrix.compiler }}
+          path: build/linux_amd64/libfinkit_platform_static.a
+          retention-days: 5
+
+  # =========================================================================
+  # Stage 1b — Windows amd64 cross-compile (Release)
+  # =========================================================================
+
+  windows-cross:
+    name: Windows amd64 (cross)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          c-build: 'true'
+          cross-compile: 'true'
+
+      - name: Configure
+        run: |
+          cmake -B build/windows_amd64 \
+            -G "Unix Makefiles" \
+            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/cmake/toolchain/x86_64-w64-mingw32.cmake \
+            -DCMAKE_MAKE_PROGRAM=/usr/bin/make \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/windows_amd64 --parallel
+
+      - name: Verify binary format
+        run: |
+          echo "=== Windows amd64 artifact ==="
+          file build/windows_amd64/libfinkit_platform_static.a
+          x86_64-w64-mingw32-objdump -f build/windows_amd64/libfinkit_platform_static.a | grep "file format"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64-mingw
+          path: build/windows_amd64/libfinkit_platform_static.a
+          retention-days: 5
+
+  # =========================================================================
+  # Stage 2 — Static analysis
+  # =========================================================================
+
+  clang-tidy:
+    name: Static / Clang-Tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          c-build: 'true'
+          qa: 'true'
+
+      - name: Configure
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          cmake -B build/clang-tidy \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: |
+          find src include \( -name '*.c' -o -name '*.h' \) \
+            ! -name 'platform_macos.c' \
+            ! -name 'platform_win.c' | \
+            xargs clang-tidy -p build/clang-tidy --quiet 2>&1 || true
+
+  cppcheck:
+    name: Static / Cppcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          cppcheck-only: 'true'
+
+      - name: Run Cppcheck
+        run: |
+          cppcheck --enable=all --std=c11 \
+            --suppress=missingInclude \
+            --suppress=toomanyconfigs \
+            --suppress=unusedFunction \
+            --suppress=knownConditionTrueFalse \
+            --quiet \
+            -j$(nproc) \
+            src/ include/
+
+  # =========================================================================
+  # Stage 3 — Go module
+  # =========================================================================
+
+  go-build:
+    name: Go Module
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          c-build: 'true'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        env:
+          CC: gcc
+          CGO_CFLAGS_ALLOW: "-mavx.*|-msse.*|-mfma|-mavx512.*"
+        run: go build .
+
+      - name: Vet
+        env:
+          CC: gcc
+          CGO_CFLAGS_ALLOW: "-mavx.*|-msse.*|-mfma|-mavx512.*"
+        run: go vet .
+
+      - name: Test
+        env:
+          CC: gcc
+          CGO_CFLAGS_ALLOW: "-mavx.*|-msse.*|-mfma|-mavx512.*"
+          FC_BUILD_MODE: source
+        run: go test -v .
+
+  # =========================================================================
+  # Build summary
+  # =========================================================================
+  build-summary:
+    name: Summary
+    needs: [
+      linux-build, windows-cross,
+      clang-tidy, cppcheck, go-build
+    ]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Print summary
+        run: |
+          echo "## platform CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | linux-build | ${{ needs.linux-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | windows-cross | ${{ needs.windows-cross.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| QA    | clang-tidy | ${{ needs.clang-tidy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| QA    | cppcheck | ${{ needs.cppcheck.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go    | go-build | ${{ needs.go-build.result }} |" >> $GITHUB_STEP_SUMMARY
