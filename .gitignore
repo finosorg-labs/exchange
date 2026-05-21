@@ -9,6 +9,8 @@ build/**
 build-*/
 install/
 
+exchange-c/**
+
 # Go
 *.test
 *.out

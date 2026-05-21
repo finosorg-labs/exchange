@@ -1,3 +1,3 @@
-module github.com/finos-org-labs/exchange
+module github.com/finosorg-labs/exchange
 
 go 1.26.1

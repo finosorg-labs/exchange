@@ -1,37 +1,53 @@
 #
-# Platform Module Code Formatting Configuration
+# Codec Module Code Formatting Configuration (K&R Style)
 #
-# Usage: clang-format --style=file -i src/file.c
+# Usage: clang-format --style=file -i codec-c/file.c
 #
 
 BasedOnStyle: LLVM
-Language: C
-ColumnLimit: 120
+ColumnLimit: 100
+
+BinPackParameters: false
+BinPackArguments: false
+AllowAllParametersOfDeclarationOnNextLine: false
+PenaltyBreakBeforeFirstCallParameter: 0
+AlignAfterOpenBracket: BlockIndent
+ContinuationIndentWidth: 4
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 1000000
 
 IndentWidth: 4
 UseTab: Never
 
-BreakBeforeBraces: K&R
+# K&R style: opening brace on same line for functions, next line for control statements
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: false
+  AfterControlStatement: Never
+  AfterStruct: false
+  AfterEnum: false
 
 PointerAlignment: Left
 
-PragmaOnce: true
+SortIncludes: CaseSensitive
 
-SortIncludes: true
-
-IndentPP directives: AfterHash
+IndentPPDirectives: AfterHash
 
 IndentCaseLabels: false
 
-IndentNamespace: false
-
-IndentAccessSpecifiers: false
-
-IndentWrappedFunctionNames: false
-
-SpaceBeforeParens: Never
+SpaceBeforeParens: ControlStatements
 SpaceAfterCStyleCast: true
 
 ReflowComments: true
 
-CommentPragmas: '^'
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveDeclarations: None
+AlignArrayOfStructures: Left
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
