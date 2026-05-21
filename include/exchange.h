@@ -1,30 +1,24 @@
 /**
- * @file codec.h
- * @brief Codec module public API
+ * @file exchange.h
+ * @brief Exchange module public API
  *
- * This header provides the main entry point for the codec module,
- * which includes various encoding/decoding implementations.
+ * This header provides the main entry point for the exchange module,
+ * which includes market data processing and exchange calculations.
  */
 
-#ifndef FC_CODEC_H
-#define FC_CODEC_H
+#ifndef FC_EXCHANGE_H
+#define FC_EXCHANGE_H
 
-#include "xxx.h"
+#include "ticker.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * @brief Initialize FIX codec subsystem
- *
- * This function initializes the FIX protocol codec implementation.
- * It is called automatically by fc_init() and should not be called directly.
- */
-void fc_xxx_init(void);
+/* Module initialization is handled by platform module */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* FC_CODEC_H */
+#endif /* FC_EXCHANGE_H */

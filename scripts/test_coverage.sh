@@ -9,11 +9,11 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="${1:-$PROJECT_ROOT/build/linux_amd64}"
 
 # Check if test binary exists
-if [ ! -f "$BUILD_DIR/tests/codec_tests" ]; then
-    echo "Error: Test binary not found at $BUILD_DIR/tests/codec_tests"
+if [ ! -f "$BUILD_DIR/tests/exchange_tests" ]; then
+    echo "Error: Test binary not found at $BUILD_DIR/tests/exchange_tests"
     echo "Please build with coverage flags first:"
     echo "  cmake -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS=\"-fprofile-arcs -ftest-coverage -O0\""
-    echo "  cmake --build $BUILD_DIR --target codec_tests"
+    echo "  cmake --build $BUILD_DIR --target exchange_tests"
     exit 1
 fi
 
@@ -21,12 +21,12 @@ fi
 echo ""
 echo "Running tests..."
 cd "$BUILD_DIR"
-./tests/codec_tests
+./tests/exchange_tests
 
 # Generate coverage report
 echo ""
 echo "============================================================"
-echo "Coverage Report - Codec Module"
+echo "Coverage Report - exchange Module"
 echo "============================================================"
 echo ""
 
