@@ -19,6 +19,7 @@ package exchange
 
 
 #include "exchange.h"
+#include "ticker.h"
 
 // Platform sources (dependency)
 #include "simd_detect.c"
@@ -39,6 +40,7 @@ package exchange
   #include "modules/platform/src/platform_win.c"
 #endif
 
-// Codec sources
+// Exchange sources
+#include "exchange-c/ticker.c"
 */
 import "C"

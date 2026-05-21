@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 /* External benchmark functions from sub-modules */
-extern void bench_xxx_run(void);
+extern void bench_ticker_run(void);
 
 /* Entry point for exchange benchmarks */
 void bench_exchange_run(void) {
@@ -22,7 +22,7 @@ void bench_exchange_run(void) {
     printf("============================================================\n");
 
     /* Run all sub-module benchmarks */
-    bench_xxx_run();
+    bench_ticker_run();
 
     printf("\n");
     printf("============================================================\n");

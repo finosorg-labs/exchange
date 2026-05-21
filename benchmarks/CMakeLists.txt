@@ -23,6 +23,7 @@ target_link_libraries(bench_framework
 add_executable(exchange_benchmarks
     bench_main.c
     bench_exchange.c
+    bench_ticker.c
 )
 
 # Link with benchmark framework and exchange library
