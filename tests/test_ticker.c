@@ -41,7 +41,8 @@ TEST(test_ticker_create_invalid_args) {
     ASSERT_NULL(ctx);
 
     ctx = fc_ticker_create(100, 1, periods, FC_TICKER_PRECISION_BIGFLOAT);
-    ASSERT_NULL(ctx);
+    ASSERT_NOT_NULL(ctx);
+    fc_ticker_destroy(ctx);
 }
 
 TEST(test_ticker_single_tick_update) {
@@ -233,6 +234,40 @@ TEST(test_ticker_invalid_tick_data) {
     fc_ticker_destroy(ctx);
 }
 
+TEST(test_ticker_bigfloat_precision) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_BIGFLOAT);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick1 = {0, 100.0, 1e15, 1e17, 1000000000LL};
+    fc_tick_t tick2 = {0, 101.0, 1.0, 101.0, 2000000000LL};
+    fc_tick_t tick3 = {0, 99.0, 1.0, 99.0, 3000000000LL};
+
+    int result = fc_ticker_update(ctx, &tick1);
+    ASSERT_EQ(result, 0);
+
+    result = fc_ticker_update(ctx, &tick2);
+    ASSERT_EQ(result, 0);
+
+    result = fc_ticker_update(ctx, &tick3);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+
+    ASSERT_EQ(ohlcv.initialized, 1);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 100.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.high, 101.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.low, 99.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.close, 99.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.volume, 1e15 + 2.0, 1e10);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.amount, 1e17 + 200.0, 1e12);
+    ASSERT_EQ(ohlcv.tick_count, 3);
+
+    fc_ticker_destroy(ctx);
+}
+
 static fc_test_fn ticker_tests[] = {
     test_ticker_create_destroy,
     test_ticker_create_invalid_args,
@@ -243,6 +278,7 @@ static fc_test_fn ticker_tests[] = {
     test_ticker_batch_update,
     test_ticker_invalid_period_duration,
     test_ticker_invalid_tick_data,
+    test_ticker_bigfloat_precision,
 };
 
 static fc_test_suite_t ticker_suite = {
