@@ -646,6 +646,193 @@ TEST(test_ticker_merge_price_fluctuation) {
     fc_ticker_merge_destroy(ctx);
 }
 
+TEST(test_ticker_merge_large_merge_count_256) {
+    int64_t base_period = 1000000000LL; // 1 second
+    int64_t derived_periods[] = {256000000000LL}; // 256 seconds
+
+    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+        1, base_period, derived_periods, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL
+    );
+    ASSERT_NOT_NULL(ctx);
+
+    // Send 256 ticks to complete one derived period
+    for (int i = 0; i < 256; i++) {
+        fc_tick_t tick = {
+            .symbol_id = 0,
+            .timestamp_ns = 1000000000LL + i * base_period,
+            .price = 100.0 + i,
+            .volume = 10.0,
+            .amount = (100.0 + i) * 10.0
+        };
+        int ret = fc_ticker_merge_update(ctx, &tick);
+        ASSERT_EQ(ret, FC_OK);
+    }
+
+    // Trigger completion with 257th tick
+    fc_tick_t tick = {
+        .symbol_id = 0,
+        .timestamp_ns = 1000000000LL + 256 * base_period,
+        .price = 356.0,
+        .volume = 10.0,
+        .amount = 3560.0
+    };
+    int ret = fc_ticker_merge_update(ctx, &tick);
+    ASSERT_EQ(ret, FC_OK);
+
+    fc_ohlcv_t derived_ohlcv;
+    ret = fc_ticker_merge_get_derived_ohlcv(ctx, 0, 0, &derived_ohlcv);
+    ASSERT_EQ(ret, FC_OK);
+    ASSERT_EQ(derived_ohlcv.initialized, 1);
+    FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.open, 100.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.close, 355.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.high, 355.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.low, 100.0, EPSILON);
+    ASSERT_EQ(derived_ohlcv.tick_count, 256);
+
+    fc_ticker_merge_destroy(ctx);
+}
+
+TEST(test_ticker_merge_large_merge_count_1440) {
+    int64_t base_period = 60000000000LL; // 1 minute
+    int64_t derived_periods[] = {86400000000000LL}; // 1 day (1440 minutes)
+
+    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+        1, base_period, derived_periods, 1, FC_TICKER_PRECISION_KAHAN, NULL, NULL
+    );
+    ASSERT_NOT_NULL(ctx);
+
+    // Send 1440 ticks to complete one day
+    for (int i = 0; i < 1440; i++) {
+        fc_tick_t tick = {
+            .symbol_id = 0,
+            .timestamp_ns = 1000000000000LL + i * base_period,
+            .price = 100.0 + (i % 100),
+            .volume = 1.0,
+            .amount = 100.0 + (i % 100)
+        };
+        int ret = fc_ticker_merge_update(ctx, &tick);
+        ASSERT_EQ(ret, FC_OK);
+    }
+
+    // Trigger completion
+    fc_tick_t tick = {
+        .symbol_id = 0,
+        .timestamp_ns = 1000000000000LL + 1440 * base_period,
+        .price = 150.0,
+        .volume = 1.0,
+        .amount = 150.0
+    };
+    int ret = fc_ticker_merge_update(ctx, &tick);
+    ASSERT_EQ(ret, FC_OK);
+
+    fc_ohlcv_t derived_ohlcv;
+    ret = fc_ticker_merge_get_derived_ohlcv(ctx, 0, 0, &derived_ohlcv);
+    ASSERT_EQ(ret, FC_OK);
+    ASSERT_EQ(derived_ohlcv.initialized, 1);
+    ASSERT_EQ(derived_ohlcv.tick_count, 1440);
+    FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.volume, 1440.0, EPSILON);
+
+    fc_ticker_merge_destroy(ctx);
+}
+
+TEST(test_ticker_merge_large_merge_count_3600) {
+    int64_t base_period = 1000000000LL; // 1 second
+    int64_t derived_periods[] = {3600000000000LL}; // 1 hour (3600 seconds)
+
+    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+        2, base_period, derived_periods, 1, FC_TICKER_PRECISION_BIGFLOAT, NULL, NULL
+    );
+    ASSERT_NOT_NULL(ctx);
+
+    // Send 3600 ticks for symbol 0
+    for (int i = 0; i < 3600; i++) {
+        fc_tick_t tick = {
+            .symbol_id = 0,
+            .timestamp_ns = 1000000000000LL + i * base_period,
+            .price = 100.0,
+            .volume = 0.1,
+            .amount = 10.0
+        };
+        int ret = fc_ticker_merge_update(ctx, &tick);
+        ASSERT_EQ(ret, FC_OK);
+    }
+
+    // Trigger completion
+    fc_tick_t tick = {
+        .symbol_id = 0,
+        .timestamp_ns = 1000000000000LL + 3600 * base_period,
+        .price = 100.0,
+        .volume = 0.1,
+        .amount = 10.0
+    };
+    int ret = fc_ticker_merge_update(ctx, &tick);
+    ASSERT_EQ(ret, FC_OK);
+
+    fc_ohlcv_t derived_ohlcv;
+    ret = fc_ticker_merge_get_derived_ohlcv(ctx, 0, 0, &derived_ohlcv);
+    ASSERT_EQ(ret, FC_OK);
+    ASSERT_EQ(derived_ohlcv.initialized, 1);
+    ASSERT_EQ(derived_ohlcv.tick_count, 3600);
+    FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.volume, 360.0, 1e-6);
+
+    fc_ticker_merge_destroy(ctx);
+}
+
+TEST(test_ticker_merge_all_precision_modes_large_count) {
+    int64_t base_period = 1000000000LL; // 1 second
+    int64_t derived_periods[] = {500000000000LL}; // 500 seconds
+
+    fc_ticker_precision_mode_t modes[] = {
+        FC_TICKER_PRECISION_STANDARD,
+        FC_TICKER_PRECISION_KAHAN,
+        FC_TICKER_PRECISION_BIGFLOAT
+    };
+
+    for (int mode_idx = 0; mode_idx < 3; mode_idx++) {
+        fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+            1, base_period, derived_periods, 1, modes[mode_idx], NULL, NULL
+        );
+        ASSERT_NOT_NULL(ctx);
+
+        // Send 500 ticks with small volumes to test precision
+        for (int i = 0; i < 500; i++) {
+            fc_tick_t tick = {
+                .symbol_id = 0,
+                .timestamp_ns = 1000000000000LL + i * base_period,
+                .price = 100.0,
+                .volume = 0.001,
+                .amount = 0.1
+            };
+            int ret = fc_ticker_merge_update(ctx, &tick);
+            ASSERT_EQ(ret, FC_OK);
+        }
+
+        // Trigger completion
+        fc_tick_t tick = {
+            .symbol_id = 0,
+            .timestamp_ns = 1000000000000LL + 500 * base_period,
+            .price = 100.0,
+            .volume = 0.001,
+            .amount = 0.1
+        };
+        int ret = fc_ticker_merge_update(ctx, &tick);
+        ASSERT_EQ(ret, FC_OK);
+
+        fc_ohlcv_t derived_ohlcv;
+        ret = fc_ticker_merge_get_derived_ohlcv(ctx, 0, 0, &derived_ohlcv);
+        ASSERT_EQ(ret, FC_OK);
+        ASSERT_EQ(derived_ohlcv.initialized, 1);
+        ASSERT_EQ(derived_ohlcv.tick_count, 500);
+
+        // Kahan and BigFloat should be more accurate than standard
+        if (modes[mode_idx] != FC_TICKER_PRECISION_STANDARD) {
+            FC_TEST_ASSERT_DOUBLE_EQ(derived_ohlcv.volume, 0.5, 1e-9);
+        }
+
+        fc_ticker_merge_destroy(ctx);
+    }
+}
+
 void register_ticker_merge_tests(void) {
     RUN_TEST(test_ticker_merge_create_destroy);
     RUN_TEST(test_ticker_merge_invalid_args);
@@ -666,4 +853,8 @@ void register_ticker_merge_tests(void) {
     RUN_TEST(test_ticker_merge_derived_period_error_handling);
     RUN_TEST(test_ticker_merge_high_low_tracking);
     RUN_TEST(test_ticker_merge_price_fluctuation);
+    RUN_TEST(test_ticker_merge_large_merge_count_256);
+    RUN_TEST(test_ticker_merge_large_merge_count_1440);
+    RUN_TEST(test_ticker_merge_large_merge_count_3600);
+    RUN_TEST(test_ticker_merge_all_precision_modes_large_count);
 }

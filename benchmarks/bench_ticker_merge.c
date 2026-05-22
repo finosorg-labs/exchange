@@ -220,7 +220,97 @@ static void run_precision_mode_benchmarks(void) {
     }
 }
 
+static void bench_merge_operation_fn(void* user_data) {
+    void** data_ptr              = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
+    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+
+    for (size_t i = 0; i < num_ticks; i++) {
+        fc_ticker_merge_update(ctx, &ticks[i]);
+    }
+}
+
+static void run_merge_count_benchmarks(void) {
+    printf("\nMerge Count Benchmarks\n");
+    printf("------------------------------------------------------------\n");
+
+    const int64_t base_period_ns = 60000000000LL; // 1 minute
+
+    struct {
+        const char* name;
+        int64_t derived_period_ns;
+        size_t merge_count;
+        fc_ticker_precision_mode_t mode;
+    } tests[] = {
+        {"TickerMerge/MergeCount/5/Standard", 300000000000LL, 5, FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/5/Kahan", 300000000000LL, 5, FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/MergeCount/5/BigFloat", 300000000000LL, 5, FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/15/Standard", 900000000000LL, 15, FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/15/Kahan", 900000000000LL, 15, FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/MergeCount/15/BigFloat", 900000000000LL, 15, FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/60/Standard", 3600000000000LL, 60, FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/60/Kahan", 3600000000000LL, 60, FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/MergeCount/60/BigFloat", 3600000000000LL, 60, FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/240/Standard", 14400000000000LL, 240, FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/240/Kahan", 14400000000000LL, 240, FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/MergeCount/240/BigFloat", 14400000000000LL, 240, FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/1440/Standard", 86400000000000LL, 1440, FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/1440/Kahan", 86400000000000LL, 1440, FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/MergeCount/1440/BigFloat", 86400000000000LL, 1440, FC_TICKER_PRECISION_BIGFLOAT},
+    };
+
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+        fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+            1,
+            base_period_ns,
+            &tests[i].derived_period_ns,
+            1,
+            tests[i].mode,
+            NULL,
+            NULL
+        );
+
+        if (ctx == NULL) {
+            fprintf(stderr, "Failed to create ticker_merge context for %s\n", tests[i].name);
+            continue;
+        }
+
+        // Generate enough ticks to trigger one merge + 1 extra to complete
+        size_t num_ticks = tests[i].merge_count + 1;
+        fc_tick_t* ticks = (fc_tick_t*) malloc(num_ticks * sizeof(fc_tick_t));
+        if (ticks == NULL) {
+            fc_ticker_merge_destroy(ctx);
+            continue;
+        }
+
+        int64_t base_time = 1000000000000LL;
+        for (size_t j = 0; j < num_ticks; j++) {
+            ticks[j].symbol_id    = 0;
+            ticks[j].timestamp_ns = base_time + (j * base_period_ns);
+            ticks[j].price        = 100.0 + (j % 10) * 0.1;
+            ticks[j].volume       = 10.0;
+            ticks[j].amount       = ticks[j].price * ticks[j].volume;
+        }
+
+        void* user_data[3] = {ctx, ticks, (void*) (uintptr_t) num_ticks};
+
+        fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+        config.name              = tests[i].name;
+        config.data_size         = num_ticks * sizeof(fc_tick_t);
+        config.min_time_ms       = 100.0;
+        config.quiet             = 0;
+
+        fc_bench_result_t result;
+        fc_bench_run(&config, bench_merge_operation_fn, user_data, &result);
+
+        free(ticks);
+        fc_ticker_merge_destroy(ctx);
+    }
+}
+
 void bench_ticker_merge_run(void) {
     run_ticker_merge_benchmarks();
     run_precision_mode_benchmarks();
+    run_merge_count_benchmarks();
 }
