@@ -24,54 +24,42 @@ static void generate_ticks(fc_tick_t* ticks, size_t num_ticks, uint32_t num_symb
 static void bench_base_only_fn(void* user_data) {
     void** data_ptr              = (void**) user_data;
     fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
 
-    for (size_t i = 0; i < num_ticks; i++) {
-        fc_ticker_merge_update(ctx, &ticks[i]);
-    }
+    fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_5min_merge_fn(void* user_data) {
     void** data_ptr              = (void**) user_data;
     fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
 
-    for (size_t i = 0; i < num_ticks; i++) {
-        fc_ticker_merge_update(ctx, &ticks[i]);
-    }
+    fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_multiple_periods_fn(void* user_data) {
     void** data_ptr              = (void**) user_data;
     fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
 
-    for (size_t i = 0; i < num_ticks; i++) {
-        fc_ticker_merge_update(ctx, &ticks[i]);
-    }
+    fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_multi_symbol_fn(void* user_data) {
     void** data_ptr              = (void**) user_data;
     fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
 
-    for (size_t i = 0; i < num_ticks; i++) {
-        fc_ticker_merge_update(ctx, &ticks[i]);
-    }
+    fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_batch_update_fn(void* user_data) {
     void** data_ptr              = (void**) user_data;
     fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
     fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+    size_t batch_size            = (size_t) (uintptr_t) data_ptr[2];
 
-    fc_ticker_merge_update_batch(ctx, ticks, num_ticks);
+    fc_ticker_merge_update_batch(ctx, ticks, batch_size);
 }
 
 static void run_ticker_merge_benchmarks(void) {
@@ -79,7 +67,6 @@ static void run_ticker_merge_benchmarks(void) {
     printf("------------------------------------------------------------\n");
 
     const int64_t base_period_ns = 60000000000LL;
-    const size_t num_ticks       = 100000;
 
     struct {
         const char* name;
@@ -88,28 +75,21 @@ static void run_ticker_merge_benchmarks(void) {
         uint32_t num_symbols;
         fc_bench_fn bench_fn;
     } tests[] = {
-        {"TickerMerge/BaseOnly/100K", NULL, 0, 1, bench_base_only_fn},
-        {"TickerMerge/5min/100K", (const int64_t[]){300000000000LL}, 1, 1, bench_5min_merge_fn},
+        {"TickerMerge/BaseOnly", NULL, 0, 1, bench_base_only_fn},
+        {"TickerMerge/5min", (const int64_t[]){300000000000LL}, 1, 1, bench_5min_merge_fn},
         {
-            "TickerMerge/Multi/5m-15m-1h/100K",
+            "TickerMerge/Multi/5m-15m-1h",
             (const int64_t[]){300000000000LL, 900000000000LL, 3600000000000LL},
             3,
             1,
             bench_multiple_periods_fn
         },
         {
-            "TickerMerge/MultiSymbol/100/100K",
+            "TickerMerge/MultiSymbol/100",
             (const int64_t[]){300000000000LL},
             1,
             100,
             bench_multi_symbol_fn
-        },
-        {
-            "TickerMerge/Batch/100K",
-            (const int64_t[]){300000000000LL},
-            1,
-            1,
-            bench_batch_update_fn
         },
     };
 
@@ -129,27 +109,60 @@ static void run_ticker_merge_benchmarks(void) {
             continue;
         }
 
-        fc_tick_t* ticks = (fc_tick_t*) malloc(num_ticks * sizeof(fc_tick_t));
-        if (ticks == NULL) {
-            fc_ticker_merge_destroy(ctx);
-            continue;
-        }
+        fc_tick_t tick;
+        tick.symbol_id    = 0;
+        tick.timestamp_ns = 1000000000000LL;
+        tick.price        = 100.0;
+        tick.volume       = 10.0;
+        tick.amount       = 1000.0;
 
-        generate_ticks(ticks, num_ticks, tests[i].num_symbols);
-
-        void* user_data[3] = {ctx, ticks, (void*) (uintptr_t) num_ticks};
+        void* user_data[2] = {ctx, &tick};
 
         fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
         config.name              = tests[i].name;
-        config.data_size         = num_ticks * sizeof(fc_tick_t);
+        config.data_size         = sizeof(fc_tick_t);
         config.min_time_ms       = 100.0;
         config.quiet             = 0;
 
         fc_bench_result_t result;
         fc_bench_run(&config, tests[i].bench_fn, user_data, &result);
 
-        free(ticks);
         fc_ticker_merge_destroy(ctx);
+    }
+
+    // Batch update benchmark
+    {
+        const size_t batch_size = 1000;
+        fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+            1,
+            base_period_ns,
+            (const int64_t[]){300000000000LL},
+            1,
+            FC_TICKER_PRECISION_STANDARD,
+            NULL,
+            NULL
+        );
+
+        if (ctx != NULL) {
+            fc_tick_t* ticks = (fc_tick_t*) malloc(batch_size * sizeof(fc_tick_t));
+            if (ticks != NULL) {
+                generate_ticks(ticks, batch_size, 1);
+
+                void* user_data[3] = {ctx, ticks, (void*) (uintptr_t) batch_size};
+
+                fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+                config.name              = "TickerMerge/Batch/1K";
+                config.data_size         = batch_size * sizeof(fc_tick_t);
+                config.min_time_ms       = 100.0;
+                config.quiet             = 0;
+
+                fc_bench_result_t result;
+                fc_bench_run(&config, bench_batch_update_fn, user_data, &result);
+
+                free(ticks);
+            }
+            fc_ticker_merge_destroy(ctx);
+        }
     }
 }
 
@@ -159,15 +172,14 @@ static void run_precision_mode_benchmarks(void) {
 
     const int64_t base_period_ns = 60000000000LL;
     const int64_t derived_periods[] = {300000000000LL};
-    const size_t num_ticks = 10000;
 
     struct {
         const char* name;
         fc_ticker_precision_mode_t mode;
     } tests[] = {
-        {"TickerMerge/Precision/Standard/10K", FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/Precision/Kahan/10K", FC_TICKER_PRECISION_KAHAN},
-        {"TickerMerge/Precision/BigFloat/10K", FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/Precision/Standard", FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/Precision/Kahan", FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/Precision/BigFloat", FC_TICKER_PRECISION_BIGFLOAT},
     };
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
@@ -186,26 +198,24 @@ static void run_precision_mode_benchmarks(void) {
             continue;
         }
 
-        fc_tick_t* ticks = (fc_tick_t*) malloc(num_ticks * sizeof(fc_tick_t));
-        if (ticks == NULL) {
-            fc_ticker_merge_destroy(ctx);
-            continue;
-        }
+        fc_tick_t tick;
+        tick.symbol_id    = 0;
+        tick.timestamp_ns = 1000000000000LL;
+        tick.price        = 100.0;
+        tick.volume       = 10.0;
+        tick.amount       = 1000.0;
 
-        generate_ticks(ticks, num_ticks, 1);
-
-        void* user_data[3] = {ctx, ticks, (void*) (uintptr_t) num_ticks};
+        void* user_data[2] = {ctx, &tick};
 
         fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
         config.name              = tests[i].name;
-        config.data_size         = num_ticks * sizeof(fc_tick_t);
+        config.data_size         = sizeof(fc_tick_t);
         config.min_time_ms       = 100.0;
         config.quiet             = 0;
 
         fc_bench_result_t result;
         fc_bench_run(&config, bench_base_only_fn, user_data, &result);
 
-        free(ticks);
         fc_ticker_merge_destroy(ctx);
     }
 }

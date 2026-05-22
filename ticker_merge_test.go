@@ -432,3 +432,248 @@ func (pm PrecisionMode) String() string {
 		return "Unknown"
 	}
 }
+
+func BenchmarkTickerMergeBaseOnly(b *testing.B) {
+	tm, err := NewTickerMerge(1, time.Minute, nil, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMerge5min(b *testing.B) {
+	derivedPeriods := []time.Duration{5 * time.Minute}
+	tm, err := NewTickerMerge(1, time.Minute, derivedPeriods, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMergeMultiPeriod(b *testing.B) {
+	derivedPeriods := []time.Duration{5 * time.Minute, 15 * time.Minute, time.Hour}
+	tm, err := NewTickerMerge(1, time.Minute, derivedPeriods, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMergeMultiSymbol(b *testing.B) {
+	const numSymbols = 100
+	derivedPeriods := []time.Duration{5 * time.Minute}
+	tm, err := NewTickerMerge(numSymbols, time.Minute, derivedPeriods, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.SymbolID = uint32(i % numSymbols)
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMergeBatch(b *testing.B) {
+	derivedPeriods := []time.Duration{5 * time.Minute}
+	tm, err := NewTickerMerge(1, time.Minute, derivedPeriods, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	batchSize := 1000
+	ticks := make([]Tick, batchSize)
+	for i := 0; i < batchSize; i++ {
+		ticks[i] = Tick{
+			SymbolID:  0,
+			Price:     100.0,
+			Volume:    10.0,
+			Amount:    1000.0,
+			Timestamp: baseTime.Add(time.Duration(i) * time.Millisecond),
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = tm.UpdateBatch(ticks)
+	}
+}
+
+func BenchmarkTickerMergePrecisionStandard(b *testing.B) {
+	tm, err := NewTickerMerge(1, time.Minute, nil, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMergePrecisionKahan(b *testing.B) {
+	tm, err := NewTickerMerge(1, time.Minute, nil, PrecisionKahan, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMergePrecisionBigfloat(b *testing.B) {
+	tm, err := NewTickerMerge(1, time.Minute, nil, PrecisionBigfloat, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tick.Timestamp = baseTime.Add(time.Duration(i) * time.Millisecond)
+		_ = tm.Update(tick)
+	}
+}
+
+func BenchmarkTickerMergeGetBaseOHLCV(b *testing.B) {
+	tm, err := NewTickerMerge(1, time.Minute, nil, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	tick := &Tick{
+		SymbolID:  0,
+		Price:     100.0,
+		Volume:    10.0,
+		Amount:    1000.0,
+		Timestamp: baseTime,
+	}
+	_ = tm.Update(tick)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = tm.GetBaseOHLCV(0)
+	}
+}
+
+func BenchmarkTickerMergeGetDerivedOHLCV(b *testing.B) {
+	derivedPeriods := []time.Duration{5 * time.Minute}
+	tm, err := NewTickerMerge(1, time.Minute, derivedPeriods, PrecisionStandard, nil)
+	if err != nil {
+		b.Fatalf("NewTickerMerge() error = %v", err)
+	}
+	defer tm.Close()
+
+	baseTime := time.Unix(1000000000, 0)
+	baseTime = baseTime.Truncate(time.Minute)
+
+	// Generate enough ticks to complete one derived period
+	for i := 0; i < 6; i++ {
+		tick := &Tick{
+			SymbolID:  0,
+			Price:     100.0,
+			Volume:    10.0,
+			Amount:    1000.0,
+			Timestamp: baseTime.Add(time.Duration(i) * time.Minute),
+		}
+		_ = tm.Update(tick)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = tm.GetDerivedOHLCV(0, 0)
+	}
+}
