@@ -59,6 +59,34 @@ if(NOT TARGET finkit::platform)
     add_library(finkit::platform ALIAS finkit_platform_static)
 endif()
 
+# Use prebuilt ds library
+if(NOT TARGET finkit::ds)
+    # Detect platform
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+            set(DS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/build/darwin_arm64")
+        else()
+            set(DS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/build/darwin_x86_64")
+        endif()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(DS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/build/linux_amd64")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(DS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/build/windows_amd64")
+    else()
+        message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+    endif()
+
+    # Import prebuilt ds library
+    add_library(finkit_ds_static STATIC IMPORTED)
+    set_target_properties(finkit_ds_static PROPERTIES
+        IMPORTED_LOCATION "${DS_BUILD_DIR}/libfinkit_ds_static.a"
+    )
+    target_include_directories(finkit_ds_static INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include"
+    )
+    add_library(finkit::ds ALIAS finkit_ds_static)
+endif()
+
 # exchange module sources
 set(EXCHANGE_SOURCES
     exchange-c/ticker.c
@@ -71,6 +99,7 @@ target_include_directories(finkit_exchange
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/platform/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include>
         $<INSTALL_INTERFACE:include>
 )
 
@@ -87,8 +116,8 @@ target_include_directories(finkit_exchange_static
         $<INSTALL_INTERFACE:include>
 )
 
-# Link platform and math library
-target_link_libraries(finkit_exchange_static PUBLIC finkit::platform m)
+# Link platform, ds and math library
+target_link_libraries(finkit_exchange_static PUBLIC finkit::platform finkit::ds m)
 
 # Create alias
 add_library(finkit::exchange ALIAS finkit_exchange_static)
