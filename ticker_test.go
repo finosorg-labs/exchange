@@ -448,3 +448,78 @@ func BenchmarkTickerBatchUpdate(b *testing.B) {
 		_ = ticker.UpdateBatch(ticks)
 	}
 }
+
+func BenchmarkTickerPrecisionStandard(b *testing.B) {
+	periods := []time.Duration{time.Minute}
+	ticker, err := NewTicker(1000, periods, PrecisionStandard)
+	if err != nil {
+		b.Fatalf("Failed to create ticker: %v", err)
+	}
+	defer ticker.Close()
+
+	ticks := make([]Tick, 10000)
+	for i := range ticks {
+		ticks[i] = Tick{
+			SymbolID:  uint32(i % 1000),
+			Price:     100.0 + float64(i%100),
+			Volume:    100.0,
+			Amount:    10000.0,
+			Timestamp: time.Unix(0, int64(i)*1000000),
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ticker.UpdateBatch(ticks)
+	}
+}
+
+func BenchmarkTickerPrecisionKahan(b *testing.B) {
+	periods := []time.Duration{time.Minute}
+	ticker, err := NewTicker(1000, periods, PrecisionKahan)
+	if err != nil {
+		b.Fatalf("Failed to create ticker: %v", err)
+	}
+	defer ticker.Close()
+
+	ticks := make([]Tick, 10000)
+	for i := range ticks {
+		ticks[i] = Tick{
+			SymbolID:  uint32(i % 1000),
+			Price:     100.0 + float64(i%100),
+			Volume:    100.0,
+			Amount:    10000.0,
+			Timestamp: time.Unix(0, int64(i)*1000000),
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ticker.UpdateBatch(ticks)
+	}
+}
+
+func BenchmarkTickerPrecisionBigfloat(b *testing.B) {
+	periods := []time.Duration{time.Minute}
+	ticker, err := NewTicker(1000, periods, PrecisionBigfloat)
+	if err != nil {
+		b.Fatalf("Failed to create ticker: %v", err)
+	}
+	defer ticker.Close()
+
+	ticks := make([]Tick, 10000)
+	for i := range ticks {
+		ticks[i] = Tick{
+			SymbolID:  uint32(i % 1000),
+			Price:     100.0 + float64(i%100),
+			Volume:    100.0,
+			Amount:    10000.0,
+			Timestamp: time.Unix(0, int64(i)*1000000),
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ticker.UpdateBatch(ticks)
+	}
+}

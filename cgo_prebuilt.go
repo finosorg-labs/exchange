@@ -15,5 +15,11 @@ package exchange
 #cgo darwin,arm64  LDFLAGS: -L${SRCDIR}/build/darwin_arm64 -lfinkit_exchange_static -lm
 #cgo windows,amd64 LDFLAGS: -L${SRCDIR}/build/windows_amd64 -lfinkit_exchange_static -lm
 
+int fc_init(void);
+void fc_cleanup(void);
 */
 import "C"
+
+func init() {
+	C.fc_init()
+}

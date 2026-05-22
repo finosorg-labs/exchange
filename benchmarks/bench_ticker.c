@@ -156,25 +156,37 @@ static void bench_precision_modes(void) {
     fc_tick_t *ticks = (fc_tick_t *)malloc(num_ticks * sizeof(fc_tick_t));
     generate_random_ticks(ticks, num_ticks, num_symbols);
 
-    fc_ticker_ctx_t *ctx_kahan =
-        fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    int64_t start = get_time_ns();
-    fc_ticker_update_batch(ctx_kahan, ticks, num_ticks);
-    int64_t end = get_time_ns();
-    double kahan_ms = (end - start) / 1e6;
-    fc_ticker_destroy(ctx_kahan);
+    printf("\nProcessing %zu ticks across %u symbols:\n", num_ticks, num_symbols);
 
     fc_ticker_ctx_t *ctx_standard =
         fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_STANDARD);
-    start = get_time_ns();
+    int64_t start = get_time_ns();
     fc_ticker_update_batch(ctx_standard, ticks, num_ticks);
-    end = get_time_ns();
+    int64_t end = get_time_ns();
     double standard_ms = (end - start) / 1e6;
     fc_ticker_destroy(ctx_standard);
 
-    printf("Kahan summation: %.3f ms\n", kahan_ms);
-    printf("Standard summation: %.3f ms\n", standard_ms);
-    printf("Overhead: %.1f%%\n", ((kahan_ms - standard_ms) / standard_ms) * 100.0);
+    fc_ticker_ctx_t *ctx_kahan =
+        fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    start = get_time_ns();
+    fc_ticker_update_batch(ctx_kahan, ticks, num_ticks);
+    end = get_time_ns();
+    double kahan_ms = (end - start) / 1e6;
+    fc_ticker_destroy(ctx_kahan);
+
+    fc_ticker_ctx_t *ctx_bigfloat =
+        fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_BIGFLOAT);
+    start = get_time_ns();
+    fc_ticker_update_batch(ctx_bigfloat, ticks, num_ticks);
+    end = get_time_ns();
+    double bigfloat_ms = (end - start) / 1e6;
+    fc_ticker_destroy(ctx_bigfloat);
+
+    printf("  STANDARD:  %.3f ms (baseline)\n", standard_ms);
+    printf("  KAHAN:     %.3f ms (+%.1f%%)\n", kahan_ms,
+           ((kahan_ms - standard_ms) / standard_ms) * 100.0);
+    printf("  BIGFLOAT:  %.3f ms (+%.1f%%)\n", bigfloat_ms,
+           ((bigfloat_ms - standard_ms) / standard_ms) * 100.0);
 
     free(ticks);
 }

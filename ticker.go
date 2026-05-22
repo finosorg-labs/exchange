@@ -3,6 +3,7 @@ package exchange
 /*
 #include "ticker.h"
 #include "error.h"
+#include "platform.h"
 #include <stdlib.h>
 */
 import "C"
@@ -43,6 +44,8 @@ const (
 	PrecisionKahan PrecisionMode = C.FC_TICKER_PRECISION_KAHAN
 	// PrecisionStandard uses standard floating-point addition
 	PrecisionStandard PrecisionMode = C.FC_TICKER_PRECISION_STANDARD
+	// PrecisionBigfloat uses arbitrary precision (extreme precision, ~2000% overhead)
+	PrecisionBigfloat PrecisionMode = C.FC_TICKER_PRECISION_BIGFLOAT
 )
 
 // Ticker aggregates tick data into OHLCV format
