@@ -1,9 +1,6 @@
 package exchange
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/platform/include
-#cgo LDFLAGS: ${SRCDIR}/build/linux_amd64/libfinkit_exchange_static.a ${SRCDIR}/modules/platform/build/linux_amd64/libfinkit_platform_static.a -lm
-
 #include "ticker.h"
 #include "error.h"
 #include <stdlib.h>
@@ -120,12 +117,13 @@ func (t *Ticker) Update(tick *Tick) error {
 }
 
 // UpdateBatch processes multiple ticks in a batch
-func (t *Ticker) UpdateBatch(ticks []Tick) (int, error) {
+// Returns error on first validation failure; all ticks before the error are applied
+func (t *Ticker) UpdateBatch(ticks []Tick) error {
 	if t.ctx == nil {
-		return 0, errors.New("ticker context is nil")
+		return errors.New("ticker context is nil")
 	}
 	if len(ticks) == 0 {
-		return 0, nil
+		return nil
 	}
 
 	cTicks := make([]C.fc_tick_t, len(ticks))
@@ -145,11 +143,11 @@ func (t *Ticker) UpdateBatch(ticks []Tick) (int, error) {
 		C.size_t(len(ticks)),
 	)
 
-	if result < 0 {
-		return 0, codeToError(C.int(result))
+	if result != 0 {
+		return codeToError(C.int(result))
 	}
 
-	return int(result), nil
+	return nil
 }
 
 // GetOHLCV retrieves OHLCV data for a specific symbol and period

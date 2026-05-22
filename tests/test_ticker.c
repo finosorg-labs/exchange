@@ -13,41 +13,41 @@
 
 #define EPSILON 1e-10
 
-static void test_ticker_create_destroy(void) {
+TEST(test_ticker_create_destroy) {
     int64_t periods[] = {60000000000LL, 300000000000LL};
     fc_ticker_ctx_t *ctx =
         fc_ticker_create(100, 2, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx != NULL, "Failed to create ticker context");
+    ASSERT_NOT_NULL(ctx);
 
     uint32_t num_symbols = 0, num_periods = 0;
     int result = fc_ticker_get_stats(ctx, &num_symbols, &num_periods);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get stats");
-    FC_TEST_ASSERT_MSG(num_symbols == 100, "Incorrect num_symbols");
-    FC_TEST_ASSERT_MSG(num_periods == 2, "Incorrect num_periods");
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(num_symbols, 100);
+    ASSERT_EQ(num_periods, 2);
 
     fc_ticker_destroy(ctx);
 }
 
-static void test_ticker_create_invalid_args(void) {
+TEST(test_ticker_create_invalid_args) {
     int64_t periods[] = {60000000000LL};
 
     fc_ticker_ctx_t *ctx = fc_ticker_create(0, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx == NULL, "Should fail with num_symbols=0");
+    ASSERT_NULL(ctx);
 
     ctx = fc_ticker_create(100, 0, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx == NULL, "Should fail with num_periods=0");
+    ASSERT_NULL(ctx);
 
     ctx = fc_ticker_create(100, 1, NULL, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx == NULL, "Should fail with NULL periods");
+    ASSERT_NULL(ctx);
 
     ctx = fc_ticker_create(100, 1, periods, FC_TICKER_PRECISION_BIGFLOAT);
-    FC_TEST_ASSERT_MSG(ctx == NULL, "Should fail with unsupported precision mode");
+    ASSERT_NULL(ctx);
 }
 
-static void test_ticker_single_tick_update(void) {
+TEST(test_ticker_single_tick_update) {
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx != NULL, "Failed to create ticker context");
+    ASSERT_NOT_NULL(ctx);
 
     fc_tick_t tick = {
         .symbol_id = 0,
@@ -58,27 +58,27 @@ static void test_ticker_single_tick_update(void) {
     };
 
     int result = fc_ticker_update(ctx, &tick);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to update tick");
+    ASSERT_EQ(result, 0);
 
     fc_ohlcv_t ohlcv;
     result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV");
-    FC_TEST_ASSERT_MSG(ohlcv.initialized == 1, "OHLCV not initialized");
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.initialized, 1);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 100.5, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.high, 100.5, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.low, 100.5, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.close, 100.5, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.volume, 1000.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.amount, 100500.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 1, "Incorrect tick_count");
+    ASSERT_EQ(ohlcv.tick_count, 1);
 
     fc_ticker_destroy(ctx);
 }
 
-static void test_ticker_multiple_ticks_same_period(void) {
+TEST(test_ticker_multiple_ticks_same_period) {
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx != NULL, "Failed to create ticker context");
+    ASSERT_NOT_NULL(ctx);
 
     fc_tick_t ticks[] = {
         {0, 100.0, 100.0, 10000.0, 1000000000LL},
@@ -89,56 +89,56 @@ static void test_ticker_multiple_ticks_same_period(void) {
 
     for (int i = 0; i < 4; i++) {
         int result = fc_ticker_update(ctx, &ticks[i]);
-        FC_TEST_ASSERT_MSG(result == 0, "Failed to update tick");
+        ASSERT_EQ(result, 0);
     }
 
     fc_ohlcv_t ohlcv;
     int result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV");
+    ASSERT_EQ(result, 0);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 100.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.high, 105.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.low, 98.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.close, 102.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.volume, 750.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.amount, 76300.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 4, "Incorrect tick_count");
+    ASSERT_EQ(ohlcv.tick_count, 4);
 
     fc_ticker_destroy(ctx);
 }
 
-static void test_ticker_period_rollover(void) {
+TEST(test_ticker_period_rollover) {
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx != NULL, "Failed to create ticker context");
+    ASSERT_NOT_NULL(ctx);
 
     fc_tick_t tick1 = {0, 100.0, 100.0, 10000.0, 1000000000LL};
     fc_tick_t tick2 = {0, 105.0, 200.0, 21000.0, 61000000000LL};
 
     int result = fc_ticker_update(ctx, &tick1);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to update tick1");
+    ASSERT_EQ(result, 0);
 
     fc_ohlcv_t ohlcv;
     result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV");
+    ASSERT_EQ(result, 0);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 100.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 1, "Incorrect tick_count for period 1");
+    ASSERT_EQ(ohlcv.tick_count, 1);
 
     result = fc_ticker_update(ctx, &tick2);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to update tick2");
+    ASSERT_EQ(result, 0);
 
     result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV");
+    ASSERT_EQ(result, 0);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 105.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.close, 105.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 1, "Incorrect tick_count for period 2");
+    ASSERT_EQ(ohlcv.tick_count, 1);
 
     fc_ticker_destroy(ctx);
 }
 
-static void test_ticker_multiple_symbols(void) {
+TEST(test_ticker_multiple_symbols) {
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(3, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx != NULL, "Failed to create ticker context");
+    ASSERT_NOT_NULL(ctx);
 
     fc_tick_t ticks[] = {
         {0, 100.0, 100.0, 10000.0, 1000000000LL},
@@ -149,33 +149,33 @@ static void test_ticker_multiple_symbols(void) {
 
     for (int i = 0; i < 4; i++) {
         int result = fc_ticker_update(ctx, &ticks[i]);
-        FC_TEST_ASSERT_MSG(result == 0, "Failed to update tick");
+        ASSERT_EQ(result, 0);
     }
 
     fc_ohlcv_t ohlcv;
     int result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV for symbol 0");
+    ASSERT_EQ(result, 0);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 100.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.close, 105.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 2, "Incorrect tick_count for symbol 0");
+    ASSERT_EQ(ohlcv.tick_count, 2);
 
     result = fc_ticker_get_ohlcv(ctx, 1, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV for symbol 1");
+    ASSERT_EQ(result, 0);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 200.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 1, "Incorrect tick_count for symbol 1");
+    ASSERT_EQ(ohlcv.tick_count, 1);
 
     result = fc_ticker_get_ohlcv(ctx, 2, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV for symbol 2");
+    ASSERT_EQ(result, 0);
     FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 300.0, EPSILON);
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 1, "Incorrect tick_count for symbol 2");
+    ASSERT_EQ(ohlcv.tick_count, 1);
 
     fc_ticker_destroy(ctx);
 }
 
-static void test_ticker_batch_update(void) {
+TEST(test_ticker_batch_update) {
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(2, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    FC_TEST_ASSERT_MSG(ctx != NULL, "Failed to create ticker context");
+    ASSERT_NOT_NULL(ctx);
 
     fc_tick_t ticks[] = {
         {0, 100.0, 100.0, 10000.0, 1000000000LL},
@@ -185,16 +185,50 @@ static void test_ticker_batch_update(void) {
     };
 
     int result = fc_ticker_update_batch(ctx, ticks, 4);
-    FC_TEST_ASSERT_MSG(result == 4, "Failed to update batch");
+    ASSERT_EQ(result, 0);
 
     fc_ohlcv_t ohlcv;
     result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV for symbol 0");
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 2, "Incorrect tick_count for symbol 0");
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.tick_count, 2);
 
     result = fc_ticker_get_ohlcv(ctx, 1, 0, &ohlcv);
-    FC_TEST_ASSERT_MSG(result == 0, "Failed to get OHLCV for symbol 1");
-    FC_TEST_ASSERT_MSG(ohlcv.tick_count == 2, "Incorrect tick_count for symbol 1");
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.tick_count, 2);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_invalid_period_duration) {
+    int64_t periods[] = {0LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NULL(ctx);
+
+    int64_t negative_periods[] = {-60000000000LL};
+    ctx = fc_ticker_create(10, 1, negative_periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NULL(ctx);
+}
+
+TEST(test_ticker_invalid_tick_data) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick_nan = {0, NAN, 100.0, 10000.0, 1000000000LL};
+    int result = fc_ticker_update(ctx, &tick_nan);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_tick_t tick_inf = {0, INFINITY, 100.0, 10000.0, 1000000000LL};
+    result = fc_ticker_update(ctx, &tick_inf);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_tick_t tick_negative = {0, -100.0, 100.0, 10000.0, 1000000000LL};
+    result = fc_ticker_update(ctx, &tick_negative);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_tick_t tick_negative_volume = {0, 100.0, -100.0, 10000.0, 1000000000LL};
+    result = fc_ticker_update(ctx, &tick_negative_volume);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
 
     fc_ticker_destroy(ctx);
 }
@@ -207,6 +241,8 @@ static fc_test_fn ticker_tests[] = {
     test_ticker_period_rollover,
     test_ticker_multiple_symbols,
     test_ticker_batch_update,
+    test_ticker_invalid_period_duration,
+    test_ticker_invalid_tick_data,
 };
 
 static fc_test_suite_t ticker_suite = {

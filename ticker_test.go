@@ -319,12 +319,9 @@ func TestTickerBatchUpdate(t *testing.T) {
 		{1, 205.0, 250.0, 51250.0, time.Unix(0, 2000000000)},
 	}
 
-	processed, err := ticker.UpdateBatch(ticks)
+	err = ticker.UpdateBatch(ticks)
 	if err != nil {
 		t.Fatalf("Failed to update batch: %v", err)
-	}
-	if processed != 4 {
-		t.Errorf("Expected 4 ticks processed, got %d", processed)
 	}
 
 	ohlcv0, err := ticker.GetOHLCV(0, 0)
@@ -448,6 +445,6 @@ func BenchmarkTickerBatchUpdate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = ticker.UpdateBatch(ticks)
+		_ = ticker.UpdateBatch(ticks)
 	}
 }

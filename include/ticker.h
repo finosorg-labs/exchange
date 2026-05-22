@@ -129,13 +129,16 @@ int fc_ticker_update(fc_ticker_ctx_t* ctx, const fc_tick_t* tick);
  * Processes multiple ticks in a batch for better cache locality and potential
  * SIMD optimization. Ticks do not need to be sorted by symbol or time.
  *
+ * If any tick fails validation, the function stops processing and returns an error.
+ * All ticks processed before the error remain applied.
+ *
  * @param ctx Ticker context
  * @param ticks Array of tick data
  * @param num_ticks Number of ticks in the array
- * @return Number of successfully processed ticks, or negative error code
+ * @return 0 on success (all ticks processed), negative error code on first failure
  *
  * Error codes:
- * - FC_ERR_INVALID_ARG: ctx or ticks is NULL
+ * - FC_ERR_INVALID_ARG: ctx or ticks is NULL, or a tick has invalid data
  *
  * Time complexity: O(num_ticks * num_periods)
  * Thread safety: Not thread-safe
