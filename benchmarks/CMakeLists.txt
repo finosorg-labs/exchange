@@ -24,6 +24,7 @@ add_executable(exchange_benchmarks
     bench_main.c
     bench_exchange.c
     bench_ticker.c
+    bench_ticker_merge.c
 )
 
 # Link with benchmark framework and exchange library

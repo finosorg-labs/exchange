@@ -20,6 +20,7 @@ package exchange
 
 #include "exchange.h"
 #include "ticker.h"
+#include "ticker_merge.h"
 
 // Platform sources (dependency)
 #include "simd_detect.c"
@@ -42,6 +43,7 @@ package exchange
 
 // Exchange sources
 #include "exchange-c/ticker.c"
+#include "exchange-c/ticker_merge.c"
 
 int fc_init(void);
 void fc_cleanup(void);
