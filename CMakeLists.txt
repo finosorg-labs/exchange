@@ -76,14 +76,8 @@ target_include_directories(finkit_exchange
 
 target_compile_definitions(finkit_exchange PRIVATE FC_STATIC_BUILD)
 
-# Set compile flags for SIMD variants based on detected level
-if(FC_SIMD_LEVEL STREQUAL "AVX512")
-    set_source_files_properties(exchange-c/ticker.c PROPERTIES COMPILE_FLAGS "${FC_AVX512_FLAGS}")
-elseif(FC_SIMD_LEVEL STREQUAL "AVX2")
-    set_source_files_properties(exchange-c/ticker.c PROPERTIES COMPILE_FLAGS "${FC_AVX2_FLAGS}")
-elseif(FC_SIMD_LEVEL STREQUAL "SSE42")
-    set_source_files_properties(exchange-c/ticker.c PROPERTIES COMPILE_FLAGS "${FC_SSE42_FLAGS}")
-endif()
+# Note: SIMD dispatch is handled via __attribute__((target(...))) in source files
+# No global SIMD flags needed - each function specifies its own target ISA
 
 # Create static library
 add_library(finkit_exchange_static STATIC $<TARGET_OBJECTS:finkit_exchange>)
