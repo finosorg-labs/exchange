@@ -48,9 +48,57 @@ const (
 	PrecisionBigfloat PrecisionMode = C.FC_TICKER_PRECISION_BIGFLOAT
 )
 
+// tickBatchConverter provides optimized batch conversion from Go Tick to C fc_tick_t
+type tickBatchConverter struct {
+	buffer    []C.fc_tick_t
+	bufferCap int
+}
+
+// newTickBatchConverter creates a new batch converter with initial capacity
+func newTickBatchConverter(initialCap int) *tickBatchConverter {
+	if initialCap < 1024 {
+		initialCap = 1024
+	}
+	return &tickBatchConverter{
+		buffer:    make([]C.fc_tick_t, initialCap),
+		bufferCap: initialCap,
+	}
+}
+
+// convertBatch converts Go Tick slice to C fc_tick_t slice with optimized buffer reuse
+func (c *tickBatchConverter) convertBatch(ticks []Tick) []C.fc_tick_t {
+	n := len(ticks)
+	if n == 0 {
+		return nil
+	}
+
+	if n > c.bufferCap {
+		newCap := n
+		if newCap < c.bufferCap*2 {
+			newCap = c.bufferCap * 2
+		}
+		c.buffer = make([]C.fc_tick_t, newCap)
+		c.bufferCap = newCap
+	}
+
+	cTicks := c.buffer[:n]
+
+	for i := range ticks {
+		tick := &ticks[i]
+		cTicks[i].symbol_id = C.uint32_t(tick.SymbolID)
+		cTicks[i].price = C.double(tick.Price)
+		cTicks[i].volume = C.double(tick.Volume)
+		cTicks[i].amount = C.double(tick.Amount)
+		cTicks[i].timestamp_ns = C.int64_t(tick.Timestamp.UnixNano())
+	}
+
+	return cTicks
+}
+
 // Ticker aggregates tick data into OHLCV format
 type Ticker struct {
-	ctx *C.fc_ticker_ctx_t
+	ctx       *C.fc_ticker_ctx_t
+	converter *tickBatchConverter
 }
 
 // NewTicker creates a new ticker aggregator
@@ -86,7 +134,15 @@ func NewTicker(numSymbols uint32, periods []time.Duration, precisionMode Precisi
 		return nil, errors.New("failed to create ticker context")
 	}
 
-	return &Ticker{ctx: ctx}, nil
+	initialBufferSize := 1024
+	if numSymbols > 1024 {
+		initialBufferSize = int(numSymbols)
+	}
+
+	return &Ticker{
+		ctx:       ctx,
+		converter: newTickBatchConverter(initialBufferSize),
+	}, nil
 }
 
 // Close destroys the ticker and frees resources
@@ -129,16 +185,7 @@ func (t *Ticker) UpdateBatch(ticks []Tick) error {
 		return nil
 	}
 
-	cTicks := make([]C.fc_tick_t, len(ticks))
-	for i, tick := range ticks {
-		cTicks[i] = C.fc_tick_t{
-			symbol_id:    C.uint32_t(tick.SymbolID),
-			price:        C.double(tick.Price),
-			volume:       C.double(tick.Volume),
-			amount:       C.double(tick.Amount),
-			timestamp_ns: C.int64_t(tick.Timestamp.UnixNano()),
-		}
-	}
+	cTicks := t.converter.convertBatch(ticks)
 
 	result := C.fc_ticker_update_batch(
 		t.ctx,

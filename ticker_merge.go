@@ -17,8 +17,9 @@ type TickerMergeCallback func(symbolID uint32, derivedPeriodIdx uint32, ohlcv *O
 
 // TickerMerge aggregates tick data with multi-period K-line merging
 type TickerMerge struct {
-	ctx      *C.fc_ticker_merge_ctx_t
-	callback TickerMergeCallback
+	ctx       *C.fc_ticker_merge_ctx_t
+	callback  TickerMergeCallback
+	converter *tickBatchConverter
 }
 
 // NewTickerMerge creates a new ticker merge aggregator
@@ -85,6 +86,13 @@ func NewTickerMerge(
 	}
 
 	tm.ctx = ctx
+
+	initialBufferSize := 1024
+	if numSymbols > 1024 {
+		initialBufferSize = int(numSymbols)
+	}
+	tm.converter = newTickBatchConverter(initialBufferSize)
+
 	return tm, nil
 }
 
@@ -127,16 +135,7 @@ func (tm *TickerMerge) UpdateBatch(ticks []Tick) error {
 		return nil
 	}
 
-	cTicks := make([]C.fc_tick_t, len(ticks))
-	for i, tick := range ticks {
-		cTicks[i] = C.fc_tick_t{
-			symbol_id:    C.uint32_t(tick.SymbolID),
-			price:        C.double(tick.Price),
-			volume:       C.double(tick.Volume),
-			amount:       C.double(tick.Amount),
-			timestamp_ns: C.int64_t(tick.Timestamp.UnixNano()),
-		}
-	}
+	cTicks := tm.converter.convertBatch(ticks)
 
 	result := C.fc_ticker_merge_update_batch(
 		tm.ctx,

@@ -151,13 +151,18 @@ static void run_ticker_merge_benchmarks(void) {
                 void* user_data[3] = {ctx, ticks, (void*) (uintptr_t) batch_size};
 
                 fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-                config.name              = "TickerMerge/Batch/1K";
+                config.name              = "TickerMerge/Batch/1K (per-batch)";
                 config.data_size         = batch_size * sizeof(fc_tick_t);
                 config.min_time_ms       = 100.0;
                 config.quiet             = 0;
 
                 fc_bench_result_t result;
                 fc_bench_run(&config, bench_batch_update_fn, user_data, &result);
+
+                // Show per-tick breakdown
+                printf("TickerMerge/Batch/1K (per-tick)               	%10lu	%12.2f ns/op\n",
+                       (unsigned long)result.iterations * batch_size,
+                       result.mean_ns / batch_size);
 
                 free(ticks);
             }

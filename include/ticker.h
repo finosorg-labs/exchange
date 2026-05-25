@@ -75,7 +75,7 @@ typedef struct fc_ticker_ctx fc_ticker_ctx_t;
 typedef enum {
     FC_TICKER_PRECISION_KAHAN    = 0, /**< Kahan summation (recommended, ~10% overhead) */
     FC_TICKER_PRECISION_STANDARD = 1, /**< Standard floating-point addition */
-    FC_TICKER_PRECISION_BIGFLOAT = 2  /**< Arbitrary precision (future, not implemented) */
+    FC_TICKER_PRECISION_BIGFLOAT = 2  /**< Arbitrary precision using platform bigfloat */
 } fc_ticker_precision_mode_t;
 
 /**
