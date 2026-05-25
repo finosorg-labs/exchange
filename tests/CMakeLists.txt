@@ -9,6 +9,7 @@ add_executable(exchange_tests
     test_exchange.c
     test_ticker.c
     test_ticker_merge.c
+    test_ticker_simd.c
 )
 
 # Link with exchange library

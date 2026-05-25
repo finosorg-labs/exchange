@@ -90,6 +90,7 @@ endif()
 # exchange module sources
 set(EXCHANGE_SOURCES
     exchange-c/ticker.c
+    exchange-c/ticker_simd.c
     exchange-c/ticker_merge.c
 )
 

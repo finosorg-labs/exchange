@@ -10,6 +10,7 @@
 
 /* External benchmark suites */
 extern void bench_exchange_run(void);
+extern void bench_ticker_simd_suite(void);
 
 int main(int argc, char** argv) {
     (void)argc;
@@ -22,6 +23,7 @@ int main(int argc, char** argv) {
     printf("exchange performance benchmarks v%s\n", FC_BENCH_VERSION);
 
     bench_exchange_run();
+    bench_ticker_simd_suite();
 
     fc_bench_cleanup();
     return 0;
