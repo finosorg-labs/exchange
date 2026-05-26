@@ -7,7 +7,7 @@
  * optimization for parallel updates.
  *
  * Key features:
- * - Sliding window for High/Low tracking
+ * - Time-based tumbling window aggregation (non-overlapping periods)
  * - Kahan summation for Volume/Amount to prevent precision loss
  * - Batch processing for 5000+ symbols with <1ms latency
  * - Multiple time period support (1m, 5m, 15m, 1d, etc.)
