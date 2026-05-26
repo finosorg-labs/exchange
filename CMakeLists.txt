@@ -91,6 +91,7 @@ endif()
 set(EXCHANGE_SOURCES
     exchange-c/ticker.c
     exchange-c/ticker_merge.c
+    exchange-c/orderbook.c
 )
 
 # Create object library
