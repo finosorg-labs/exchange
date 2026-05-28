@@ -31,6 +31,10 @@ package exchange
 #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/modules/sort/build/darwin_x86_64/libfinkit_sort_static.a -lm
 #cgo windows LDFLAGS: ${SRCDIR}/modules/sort/build/windows_amd64/libfinkit_sort_static.a -lm
 
+#cgo linux LDFLAGS: ${SRCDIR}/modules/stats/build/linux_amd64/libfinkit_stats_static.a -lm -lgcov
+#cgo darwin,arm64 LDFLAGS: ${SRCDIR}/modules/stats/build/darwin_arm64/libfinkit_stats_static.a -lm
+#cgo darwin,amd64 LDFLAGS: ${SRCDIR}/modules/stats/build/darwin_x86_64/libfinkit_stats_static.a -lm
+#cgo windows LDFLAGS: ${SRCDIR}/modules/stats/build/windows_amd64/libfinkit_stats_static.a -lm
 
 #include "exchange.h"
 #include "ticker.h"

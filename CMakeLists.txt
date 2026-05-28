@@ -115,6 +115,34 @@ if(NOT TARGET finkit::sort)
     add_library(finkit::sort ALIAS finkit_sort_static)
 endif()
 
+# Use prebuilt stats library
+if(NOT TARGET finkit::stats)
+    # Detect stats
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+            set(STATS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/build/darwin_arm64")
+        else()
+            set(STATS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/build/darwin_x86_64")
+        endif()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(STATS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/build/linux_amd64")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(STATS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/build/windows_amd64")
+    else()
+        message(FATAL_ERROR "Unsupported stats: ${CMAKE_SYSTEM_NAME}")
+    endif()
+
+    # Import prebuilt stats library
+    add_library(finkit_stats_static STATIC IMPORTED)
+    set_target_properties(finkit_stats_static PROPERTIES
+        IMPORTED_LOCATION "${STATS_BUILD_DIR}/libfinkit_stats_static.a"
+    )
+    target_include_directories(finkit_stats_static INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/include"
+    )
+    add_library(finkit::stats ALIAS finkit_stats_static)
+endif()
+
 # exchange module sources
 set(EXCHANGE_SOURCES
     exchange-c/ticker.c
@@ -131,6 +159,7 @@ target_include_directories(finkit_exchange
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/platform/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/include>
         $<INSTALL_INTERFACE:include>
 )
 
@@ -147,8 +176,8 @@ target_include_directories(finkit_exchange_static
         $<INSTALL_INTERFACE:include>
 )
 
-# Link platform, ds and math library
-target_link_libraries(finkit_exchange_static PUBLIC finkit::platform finkit::ds finkit::sort m)
+# Link platform, ds, stats and math library
+target_link_libraries(finkit_exchange_static PUBLIC finkit::platform finkit::ds finkit::sort finkit::stats m gcov)
 
 # Create alias
 add_library(finkit::exchange ALIAS finkit_exchange_static)
