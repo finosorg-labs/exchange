@@ -7,16 +7,7 @@
 #include "ticker.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-
-#define NSEC_PER_SEC 1000000000LL
-
-static inline int64_t get_time_ns(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (int64_t)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
-}
 
 static void generate_random_ticks(fc_tick_t *ticks, size_t num_ticks, uint32_t num_symbols) {
     for (size_t i = 0; i < num_ticks; i++) {
@@ -28,9 +19,20 @@ static void generate_random_ticks(fc_tick_t *ticks, size_t num_ticks, uint32_t n
     }
 }
 
-static void bench_single_symbol_single_period(void) {
-    printf("\n=== Benchmark: Single Symbol, Single Period ===\n");
+typedef struct {
+    fc_ticker_ctx_t *ctx;
+    fc_tick_t *ticks;
+    size_t num_ticks;
+} bench_ticker_data_t;
 
+static void bench_ticker_update_fn(void* user_data) {
+    bench_ticker_data_t* data = (bench_ticker_data_t*)user_data;
+    for (size_t i = 0; i < data->num_ticks; i++) {
+        fc_ticker_update(data->ctx, &data->ticks[i]);
+    }
+}
+
+static void bench_single_symbol_single_period(void) {
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(1, 1, periods, FC_TICKER_PRECISION_KAHAN);
     if (ctx == NULL) {
@@ -38,30 +40,30 @@ static void bench_single_symbol_single_period(void) {
         return;
     }
 
-    const size_t num_ticks = 100000;
+    const size_t num_ticks = 10000;
     fc_tick_t *ticks = (fc_tick_t *)malloc(num_ticks * sizeof(fc_tick_t));
     generate_random_ticks(ticks, num_ticks, 1);
 
-    int64_t start = get_time_ns();
-    for (size_t i = 0; i < num_ticks; i++) {
-        fc_ticker_update(ctx, &ticks[i]);
-    }
-    int64_t end = get_time_ns();
+    bench_ticker_data_t data = {
+        .ctx = ctx,
+        .ticks = ticks,
+        .num_ticks = num_ticks
+    };
 
-    double elapsed_ms = (end - start) / 1e6;
-    double ticks_per_sec = num_ticks / (elapsed_ms / 1000.0);
+    fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+    config.name = "ticker_single_symbol_10K";
+    config.data_size = num_ticks * sizeof(fc_tick_t);
+    config.min_time_ms = 100.0;
 
-    printf("Processed %zu ticks in %.3f ms\n", num_ticks, elapsed_ms);
-    printf("Throughput: %.0f ticks/sec\n", ticks_per_sec);
-    printf("Latency per tick: %.3f ns\n", (end - start) / (double)num_ticks);
+    fc_bench_result_t result;
+    fc_bench_run(&config, bench_ticker_update_fn, &data, &result);
+    fc_bench_result_print(&result);
 
     free(ticks);
     fc_ticker_destroy(ctx);
 }
 
 static void bench_multi_symbol_single_period(void) {
-    printf("\n=== Benchmark: 5000 Symbols, Single Period ===\n");
-
     const uint32_t num_symbols = 5000;
     int64_t periods[] = {60000000000LL};
     fc_ticker_ctx_t *ctx = fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_KAHAN);
@@ -70,31 +72,41 @@ static void bench_multi_symbol_single_period(void) {
         return;
     }
 
-    const size_t num_ticks = 500000;
+    const size_t num_ticks = 10000;
     fc_tick_t *ticks = (fc_tick_t *)malloc(num_ticks * sizeof(fc_tick_t));
     generate_random_ticks(ticks, num_ticks, num_symbols);
 
-    int64_t start = get_time_ns();
-    for (size_t i = 0; i < num_ticks; i++) {
-        fc_ticker_update(ctx, &ticks[i]);
-    }
-    int64_t end = get_time_ns();
+    bench_ticker_data_t data = {
+        .ctx = ctx,
+        .ticks = ticks,
+        .num_ticks = num_ticks
+    };
 
-    double elapsed_ms = (end - start) / 1e6;
-    double ticks_per_sec = num_ticks / (elapsed_ms / 1000.0);
+    fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+    config.name = "ticker_5000_symbols_10K";
+    config.data_size = num_ticks * sizeof(fc_tick_t);
+    config.min_time_ms = 100.0;
 
-    printf("Processed %zu ticks across %u symbols in %.3f ms\n", num_ticks, num_symbols,
-           elapsed_ms);
-    printf("Throughput: %.0f ticks/sec\n", ticks_per_sec);
-    printf("Latency per tick: %.3f ns\n", (end - start) / (double)num_ticks);
+    fc_bench_result_t result;
+    fc_bench_run(&config, bench_ticker_update_fn, &data, &result);
+    fc_bench_result_print(&result);
 
     free(ticks);
     fc_ticker_destroy(ctx);
 }
 
-static void bench_full_market_aggregation(void) {
-    printf("\n=== Benchmark: Full Market Aggregation (Target: <1ms) ===\n");
+typedef struct {
+    fc_ticker_ctx_t *ctx;
+    fc_tick_t *ticks;
+    size_t batch_size;
+} bench_batch_data_t;
 
+static void bench_batch_fn(void* user_data) {
+    bench_batch_data_t* data = (bench_batch_data_t*)user_data;
+    fc_ticker_update_batch(data->ctx, data->ticks, data->batch_size);
+}
+
+static void bench_full_market_aggregation(void) {
     const uint32_t num_symbols = 5000;
     const uint32_t num_periods = 4;
     int64_t periods[] = {
@@ -115,96 +127,82 @@ static void bench_full_market_aggregation(void) {
     fc_tick_t *ticks = (fc_tick_t *)malloc(batch_size * sizeof(fc_tick_t));
     generate_random_ticks(ticks, batch_size, num_symbols);
 
-    const int num_iterations = 100;
-    int64_t total_time = 0;
-    int64_t min_time = NSEC_PER_SEC;
-    int64_t max_time = 0;
+    bench_batch_data_t data = {
+        .ctx = ctx,
+        .ticks = ticks,
+        .batch_size = batch_size
+    };
 
-    for (int iter = 0; iter < num_iterations; iter++) {
-        int64_t start = get_time_ns();
-        fc_ticker_update_batch(ctx, ticks, batch_size);
-        int64_t end = get_time_ns();
+    fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+    config.name = "ticker_full_market_batch";
+    config.data_size = batch_size * sizeof(fc_tick_t);
+    config.min_time_ms = 100.0;
+    config.min_iterations = 10;
 
-        int64_t elapsed = end - start;
-        total_time += elapsed;
-        if (elapsed < min_time) min_time = elapsed;
-        if (elapsed > max_time) max_time = elapsed;
-    }
-
-    double avg_ms = (total_time / num_iterations) / 1e6;
-    double min_ms = min_time / 1e6;
-    double max_ms = max_time / 1e6;
-
-    printf("Batch size: %zu ticks\n", batch_size);
-    printf("Iterations: %d\n", num_iterations);
-    printf("Average latency: %.3f ms\n", avg_ms);
-    printf("Min latency: %.3f ms\n", min_ms);
-    printf("Max latency: %.3f ms\n", max_ms);
-    printf("Target: <1ms - %s\n", avg_ms < 1.0 ? "PASS" : "FAIL");
+    fc_bench_result_t result;
+    fc_bench_run(&config, bench_batch_fn, &data, &result);
+    fc_bench_result_print(&result);
 
     free(ticks);
     fc_ticker_destroy(ctx);
 }
 
-static void bench_precision_modes(void) {
-    printf("\n=== Benchmark: Precision Mode Comparison ===\n");
-
+static void bench_precision_mode(fc_ticker_precision_mode_t mode, const char* mode_name) {
     const uint32_t num_symbols = 1000;
     int64_t periods[] = {60000000000LL};
 
-    const size_t num_ticks = 100000;
+    fc_ticker_ctx_t *ctx = fc_ticker_create(num_symbols, 1, periods, mode);
+    if (ctx == NULL) {
+        fprintf(stderr, "Failed to create ticker context\n");
+        return;
+    }
+
+    const size_t num_ticks = 10000;
     fc_tick_t *ticks = (fc_tick_t *)malloc(num_ticks * sizeof(fc_tick_t));
     generate_random_ticks(ticks, num_ticks, num_symbols);
 
-    printf("\nProcessing %zu ticks across %u symbols:\n", num_ticks, num_symbols);
+    bench_ticker_data_t data = {
+        .ctx = ctx,
+        .ticks = ticks,
+        .num_ticks = num_ticks
+    };
 
-    fc_ticker_ctx_t *ctx_standard =
-        fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_STANDARD);
-    int64_t start = get_time_ns();
-    fc_ticker_update_batch(ctx_standard, ticks, num_ticks);
-    int64_t end = get_time_ns();
-    double standard_ms = (end - start) / 1e6;
-    fc_ticker_destroy(ctx_standard);
+    char name[64];
+    snprintf(name, sizeof(name), "ticker_precision_%s", mode_name);
 
-    fc_ticker_ctx_t *ctx_kahan =
-        fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_KAHAN);
-    start = get_time_ns();
-    fc_ticker_update_batch(ctx_kahan, ticks, num_ticks);
-    end = get_time_ns();
-    double kahan_ms = (end - start) / 1e6;
-    fc_ticker_destroy(ctx_kahan);
+    fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+    config.name = name;
+    config.data_size = num_ticks * sizeof(fc_tick_t);
+    config.min_time_ms = 100.0;
 
-    fc_ticker_ctx_t *ctx_bigfloat =
-        fc_ticker_create(num_symbols, 1, periods, FC_TICKER_PRECISION_BIGFLOAT);
-    start = get_time_ns();
-    fc_ticker_update_batch(ctx_bigfloat, ticks, num_ticks);
-    end = get_time_ns();
-    double bigfloat_ms = (end - start) / 1e6;
-    fc_ticker_destroy(ctx_bigfloat);
-
-    printf("  STANDARD:  %.3f ms (baseline)\n", standard_ms);
-    printf("  KAHAN:     %.3f ms (+%.1f%%)\n", kahan_ms,
-           ((kahan_ms - standard_ms) / standard_ms) * 100.0);
-    printf("  BIGFLOAT:  %.3f ms (+%.1f%%)\n", bigfloat_ms,
-           ((bigfloat_ms - standard_ms) / standard_ms) * 100.0);
+    fc_bench_result_t result;
+    fc_bench_run(&config, bench_ticker_update_fn, &data, &result);
+    fc_bench_result_print(&result);
 
     free(ticks);
+    fc_ticker_destroy(ctx);
 }
 
 void bench_ticker_run(void) {
     printf("\n");
-    printf("========================================\n");
-    printf("Ticker Performance Benchmarks\n");
-    printf("========================================\n");
+    printf("============================================================\n");
+    printf("  Ticker Performance Benchmarks\n");
+    printf("============================================================\n");
+    printf("\n");
 
     srand(42);
+
+    fc_bench_print_header();
 
     bench_single_symbol_single_period();
     bench_multi_symbol_single_period();
     bench_full_market_aggregation();
-    bench_precision_modes();
 
-    printf("\n========================================\n");
-    printf("Ticker Benchmarks Complete\n");
-    printf("========================================\n");
+    printf("\nPrecision Mode Comparison\n");
+    printf("------------------------------------------------------------\n");
+    bench_precision_mode(FC_TICKER_PRECISION_STANDARD, "standard");
+    bench_precision_mode(FC_TICKER_PRECISION_KAHAN, "kahan");
+    bench_precision_mode(FC_TICKER_PRECISION_BIGFLOAT, "bigfloat");
+
+    printf("\n");
 }

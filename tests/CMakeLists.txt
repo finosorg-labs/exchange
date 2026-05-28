@@ -28,6 +28,8 @@ target_include_directories(exchange_tests
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/modules/platform/include
+        ${CMAKE_SOURCE_DIR}/modules/ds/include
+        ${CMAKE_SOURCE_DIR}/modules/sort/include
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

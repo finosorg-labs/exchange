@@ -10,6 +10,7 @@ package exchange
 #cgo CFLAGS: -I${SRCDIR}/include
 #cgo CFLAGS: -I${SRCDIR}/modules/platform/include
 #cgo CFLAGS: -I${SRCDIR}/modules/ds/include
+#cgo CFLAGS: -I${SRCDIR}/modules/sort/include
 #cgo CFLAGS: -I${SRCDIR}/modules/stats/include
 #cgo CFLAGS: -I${SRCDIR}/exchange-c
 #cgo CFLAGS: -I${SRCDIR}/modules/platform/src -O2 -Wall -std=c11 -mavx2 -mfma
@@ -23,12 +24,19 @@ package exchange
 #cgo darwin,arm64 LDFLAGS: ${SRCDIR}/modules/ds/build/darwin_arm64/libfinkit_ds_static.a -lm
 #cgo darwin,amd64 LDFLAGS: ${SRCDIR}/modules/ds/build/darwin_x86_64/libfinkit_ds_static.a -lm
 #cgo windows LDFLAGS: ${SRCDIR}/modules/ds/build/windows_amd64/libfinkit_ds_static.a -lm
+#cgo windows LDFLAGS: ${SRCDIR}/modules/ds/build/windows_amd64/libfinkit_ds_static.a -lm
+
+#cgo linux LDFLAGS: ${SRCDIR}/modules/sort/build/linux_amd64/libfinkit_sort_static.a -lm -lgcov
+#cgo darwin,arm64 LDFLAGS: ${SRCDIR}/modules/sort/build/darwin_arm64/libfinkit_sort_static.a -lm
+#cgo darwin,amd64 LDFLAGS: ${SRCDIR}/modules/sort/build/darwin_x86_64/libfinkit_sort_static.a -lm
+#cgo windows LDFLAGS: ${SRCDIR}/modules/sort/build/windows_amd64/libfinkit_sort_static.a -lm
 
 
 #include "exchange.h"
 #include "ticker.h"
 #include "ticker_merge.h"
 #include "generic_ring_buffer.h"
+#include "orderbook.h"
 
 // Platform sources (dependency)
 #include "simd_detect.c"
@@ -52,6 +60,7 @@ package exchange
 // Exchange sources
 #include "exchange-c/ticker.c"
 #include "exchange-c/ticker_merge.c"
+#include "exchange-c/orderbook.c"
 
 int fc_init(void);
 void fc_cleanup(void);

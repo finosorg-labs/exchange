@@ -8,6 +8,7 @@ package exchange
 /*
 #cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/platform/include
 #cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/ds/include
+#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/sort/include
 #cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/stats/include
 #cgo linux,amd64   LDFLAGS: -L${SRCDIR}/build/linux_amd64 -lfinkit_exchange_static -lm
 #cgo linux,arm64   LDFLAGS: -L${SRCDIR}/build/linux_arm64 -lfinkit_exchange_static -lm

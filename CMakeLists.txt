@@ -61,7 +61,7 @@ endif()
 
 # Use prebuilt ds library
 if(NOT TARGET finkit::ds)
-    # Detect platform
+    # Detect ds
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
             set(DS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/build/darwin_arm64")
@@ -87,6 +87,34 @@ if(NOT TARGET finkit::ds)
     add_library(finkit::ds ALIAS finkit_ds_static)
 endif()
 
+# Use prebuilt sort library
+if(NOT TARGET finkit::sort)
+    # Detect sort
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+            set(SORT_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/build/darwin_arm64")
+        else()
+            set(SORT_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/build/darwin_x86_64")
+        endif()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(SORT_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/build/linux_amd64")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(SORT_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/build/windows_amd64")
+    else()
+        message(FATAL_ERROR "Unsupported sort: ${CMAKE_SYSTEM_NAME}")
+    endif()
+
+    # Import prebuilt sort library
+    add_library(finkit_sort_static STATIC IMPORTED)
+    set_target_properties(finkit_sort_static PROPERTIES
+        IMPORTED_LOCATION "${SORT_BUILD_DIR}/libfinkit_sort_static.a"
+    )
+    target_include_directories(finkit_sort_static INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/include"
+    )
+    add_library(finkit::sort ALIAS finkit_sort_static)
+endif()
+
 # exchange module sources
 set(EXCHANGE_SOURCES
     exchange-c/ticker.c
@@ -102,6 +130,7 @@ target_include_directories(finkit_exchange
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/platform/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/include>
         $<INSTALL_INTERFACE:include>
 )
 
@@ -119,7 +148,7 @@ target_include_directories(finkit_exchange_static
 )
 
 # Link platform, ds and math library
-target_link_libraries(finkit_exchange_static PUBLIC finkit::platform finkit::ds m)
+target_link_libraries(finkit_exchange_static PUBLIC finkit::platform finkit::ds finkit::sort m)
 
 # Create alias
 add_library(finkit::exchange ALIAS finkit_exchange_static)
