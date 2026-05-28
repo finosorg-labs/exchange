@@ -400,3 +400,219 @@ func BenchmarkGenerateSnapshotBatch1000(b *testing.B) {
 		_, _ = GenerateSnapshotBatch(orders, numSymbols, 10, OrderBookPrecisionKahan, timestamp)
 	}
 }
+
+func TestGenerateSnapshotUnsorted(t *testing.T) {
+	orders := []Order{
+		{SymbolID: 0, Price: 100.5, Volume: 12.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 3)},
+		{SymbolID: 0, Price: 99.5, Volume: 15.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 2)},
+		{SymbolID: 0, Price: 100.0, Volume: 20.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 1)},
+		{SymbolID: 0, Price: 101.0, Volume: 25.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 5)},
+		{SymbolID: 0, Price: 100.0, Volume: 10.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 0)},
+		{SymbolID: 0, Price: 100.5, Volume: 18.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 4)},
+	}
+
+	timestamp := time.Now()
+	snapshot, err := GenerateSnapshotUnsorted(orders, 10, OrderBookPrecisionKahan, timestamp)
+	if err != nil {
+		t.Fatalf("GenerateSnapshotUnsorted failed: %v", err)
+	}
+
+	if snapshot.SymbolID != 0 {
+		t.Errorf("Expected symbol ID 0, got %d", snapshot.SymbolID)
+	}
+
+	if len(snapshot.Bids) != 2 {
+		t.Errorf("Expected 2 bid levels, got %d", len(snapshot.Bids))
+	}
+
+	if len(snapshot.Asks) != 2 {
+		t.Errorf("Expected 2 ask levels, got %d", len(snapshot.Asks))
+	}
+
+	if math.Abs(snapshot.Bids[0].Price-100.0) > 1e-10 {
+		t.Errorf("Expected best bid price 100.0, got %.2f", snapshot.Bids[0].Price)
+	}
+
+	if math.Abs(snapshot.Bids[0].Volume-30.0) > 1e-10 {
+		t.Errorf("Expected best bid volume 30.0, got %.2f", snapshot.Bids[0].Volume)
+	}
+
+	if math.Abs(snapshot.Asks[0].Price-100.5) > 1e-10 {
+		t.Errorf("Expected best ask price 100.5, got %.2f", snapshot.Asks[0].Price)
+	}
+
+	if math.Abs(snapshot.Asks[0].Volume-30.0) > 1e-10 {
+		t.Errorf("Expected best ask volume 30.0, got %.2f", snapshot.Asks[0].Volume)
+	}
+
+	if math.Abs(snapshot.Spread-0.5) > 1e-10 {
+		t.Errorf("Expected spread 0.5, got %.2f", snapshot.Spread)
+	}
+
+	if math.Abs(snapshot.MidPrice-100.25) > 1e-10 {
+		t.Errorf("Expected mid price 100.25, got %.2f", snapshot.MidPrice)
+	}
+}
+
+func TestGenerateSnapshotComparison(t *testing.T) {
+	sortedOrders := []Order{
+		{SymbolID: 0, Price: 100.0, Volume: 10.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 0)},
+		{SymbolID: 0, Price: 100.0, Volume: 20.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 1)},
+		{SymbolID: 0, Price: 99.5, Volume: 15.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 2)},
+		{SymbolID: 0, Price: 100.5, Volume: 12.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 3)},
+		{SymbolID: 0, Price: 100.5, Volume: 18.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 4)},
+		{SymbolID: 0, Price: 101.0, Volume: 25.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 5)},
+	}
+
+	unsortedOrders := []Order{
+		{SymbolID: 0, Price: 100.5, Volume: 12.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 3)},
+		{SymbolID: 0, Price: 99.5, Volume: 15.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 2)},
+		{SymbolID: 0, Price: 100.0, Volume: 20.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 1)},
+		{SymbolID: 0, Price: 101.0, Volume: 25.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 5)},
+		{SymbolID: 0, Price: 100.0, Volume: 10.0, Side: OrderBookSideBid, Timestamp: time.Unix(0, 0)},
+		{SymbolID: 0, Price: 100.5, Volume: 18.0, Side: OrderBookSideAsk, Timestamp: time.Unix(0, 4)},
+	}
+
+	timestamp := time.Now()
+
+	sortedSnapshot, err := GenerateSnapshot(sortedOrders, 10, OrderBookPrecisionKahan, timestamp)
+	if err != nil {
+		t.Fatalf("GenerateSnapshot failed: %v", err)
+	}
+
+	unsortedSnapshot, err := GenerateSnapshotUnsorted(unsortedOrders, 10, OrderBookPrecisionKahan, timestamp)
+	if err != nil {
+		t.Fatalf("GenerateSnapshotUnsorted failed: %v", err)
+	}
+
+	if len(sortedSnapshot.Bids) != len(unsortedSnapshot.Bids) {
+		t.Errorf("Bid levels mismatch: sorted=%d, unsorted=%d", len(sortedSnapshot.Bids), len(unsortedSnapshot.Bids))
+	}
+
+	if len(sortedSnapshot.Asks) != len(unsortedSnapshot.Asks) {
+		t.Errorf("Ask levels mismatch: sorted=%d, unsorted=%d", len(sortedSnapshot.Asks), len(unsortedSnapshot.Asks))
+	}
+
+	for i := 0; i < len(sortedSnapshot.Bids); i++ {
+		if math.Abs(sortedSnapshot.Bids[i].Price-unsortedSnapshot.Bids[i].Price) > 1e-10 {
+			t.Errorf("Bid[%d] price mismatch: sorted=%.2f, unsorted=%.2f", i, sortedSnapshot.Bids[i].Price, unsortedSnapshot.Bids[i].Price)
+		}
+		if math.Abs(sortedSnapshot.Bids[i].Volume-unsortedSnapshot.Bids[i].Volume) > 1e-10 {
+			t.Errorf("Bid[%d] volume mismatch: sorted=%.2f, unsorted=%.2f", i, sortedSnapshot.Bids[i].Volume, unsortedSnapshot.Bids[i].Volume)
+		}
+	}
+
+	for i := 0; i < len(sortedSnapshot.Asks); i++ {
+		if math.Abs(sortedSnapshot.Asks[i].Price-unsortedSnapshot.Asks[i].Price) > 1e-10 {
+			t.Errorf("Ask[%d] price mismatch: sorted=%.2f, unsorted=%.2f", i, sortedSnapshot.Asks[i].Price, unsortedSnapshot.Asks[i].Price)
+		}
+		if math.Abs(sortedSnapshot.Asks[i].Volume-unsortedSnapshot.Asks[i].Volume) > 1e-10 {
+			t.Errorf("Ask[%d] volume mismatch: sorted=%.2f, unsorted=%.2f", i, sortedSnapshot.Asks[i].Volume, unsortedSnapshot.Asks[i].Volume)
+		}
+	}
+
+	if math.Abs(sortedSnapshot.Spread-unsortedSnapshot.Spread) > 1e-10 {
+		t.Errorf("Spread mismatch: sorted=%.2f, unsorted=%.2f", sortedSnapshot.Spread, unsortedSnapshot.Spread)
+	}
+
+	if math.Abs(sortedSnapshot.MidPrice-unsortedSnapshot.MidPrice) > 1e-10 {
+		t.Errorf("MidPrice mismatch: sorted=%.2f, unsorted=%.2f", sortedSnapshot.MidPrice, unsortedSnapshot.MidPrice)
+	}
+}
+
+func BenchmarkGenerateSnapshotUnsorted100(b *testing.B) {
+	orders := make([]Order, 100)
+	for i := 0; i < 50; i++ {
+		orders[i*2] = Order{
+			SymbolID:  0,
+			Price:     100.0 - float64(i)*0.1,
+			Volume:    10.0 + float64(i),
+			Side:      OrderBookSideBid,
+			Timestamp: time.Unix(0, int64(i)),
+		}
+		orders[i*2+1] = Order{
+			SymbolID:  0,
+			Price:     100.5 + float64(i)*0.1,
+			Volume:    10.0 + float64(i),
+			Side:      OrderBookSideAsk,
+			Timestamp: time.Unix(0, int64(50+i)),
+		}
+	}
+
+	timestamp := time.Now()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ordersCopy := make([]Order, len(orders))
+		copy(ordersCopy, orders)
+		_, _ = GenerateSnapshotUnsorted(ordersCopy, 10, OrderBookPrecisionKahan, timestamp)
+	}
+}
+
+func BenchmarkGenerateSnapshotUnsorted1000(b *testing.B) {
+	orders := make([]Order, 1000)
+	for i := 0; i < 500; i++ {
+		orders[i*2] = Order{
+			SymbolID:  0,
+			Price:     100.0 - float64(i)*0.01,
+			Volume:    10.0 + float64(i),
+			Side:      OrderBookSideBid,
+			Timestamp: time.Unix(0, int64(i)),
+		}
+		orders[i*2+1] = Order{
+			SymbolID:  0,
+			Price:     100.5 + float64(i)*0.01,
+			Volume:    10.0 + float64(i),
+			Side:      OrderBookSideAsk,
+			Timestamp: time.Unix(0, int64(500+i)),
+		}
+	}
+
+	timestamp := time.Now()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ordersCopy := make([]Order, len(orders))
+		copy(ordersCopy, orders)
+		_, _ = GenerateSnapshotUnsorted(ordersCopy, 10, OrderBookPrecisionKahan, timestamp)
+	}
+}
+
+func BenchmarkGenerateSnapshotSortedVsUnsorted(b *testing.B) {
+	sortedOrders := make([]Order, 500)
+	for i := 0; i < 250; i++ {
+		sortedOrders[i] = Order{
+			SymbolID:  0,
+			Price:     100.0 - float64(i)*0.01,
+			Volume:    10.0 + float64(i),
+			Side:      OrderBookSideBid,
+			Timestamp: time.Unix(0, int64(i)),
+		}
+	}
+	for i := 0; i < 250; i++ {
+		sortedOrders[250+i] = Order{
+			SymbolID:  0,
+			Price:     100.5 + float64(i)*0.01,
+			Volume:    10.0 + float64(i),
+			Side:      OrderBookSideAsk,
+			Timestamp: time.Unix(0, int64(250+i)),
+		}
+	}
+
+	timestamp := time.Now()
+
+	b.Run("Sorted", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, _ = GenerateSnapshot(sortedOrders, 10, OrderBookPrecisionKahan, timestamp)
+		}
+	})
+
+	b.Run("Unsorted", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ordersCopy := make([]Order, len(sortedOrders))
+			copy(ordersCopy, sortedOrders)
+			_, _ = GenerateSnapshotUnsorted(ordersCopy, 10, OrderBookPrecisionKahan, timestamp)
+		}
+	})
+}
+

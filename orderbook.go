@@ -59,7 +59,10 @@ type OrderBookSnapshot struct {
 	SymbolID         uint32
 }
 
-// GenerateSnapshot generates an order book snapshot from raw orders
+// GenerateSnapshot generates an order book snapshot from pre-sorted orders
+//
+// This is the high-performance path for scenarios where orders are already sorted
+// (e.g., extracted from an ordered data structure like a red-black tree).
 //
 // Parameters:
 //   - orders: Array of orders for a single symbol (must be pre-sorted by price)
@@ -72,6 +75,7 @@ type OrderBookSnapshot struct {
 //   - error if generation fails
 //
 // Note: Orders must be sorted: bids descending by price, asks ascending by price.
+// For unsorted orders, use GenerateSnapshotUnsorted instead.
 func GenerateSnapshot(orders []Order, maxLevels uint32, precisionMode OrderBookPrecisionMode, timestamp time.Time) (*OrderBookSnapshot, error) {
 	if len(orders) == 0 {
 		return &OrderBookSnapshot{
@@ -118,6 +122,112 @@ func GenerateSnapshot(orders []Order, maxLevels uint32, precisionMode OrderBookP
 
 	// Call C function
 	status := C.fc_orderbook_snapshot_generate(
+		&cSnapshot,
+		cOrders,
+		C.size_t(len(orders)),
+		C.uint32_t(maxLevels),
+		C.fc_orderbook_precision_mode_t(precisionMode),
+		C.int64_t(timestamp.UnixNano()),
+	)
+
+	if status != C.FC_OK {
+		return nil, fmt.Errorf("failed to generate snapshot: status %d", status)
+	}
+
+	// Convert C snapshot to Go snapshot
+	snapshot := &OrderBookSnapshot{
+		Bids:             make([]PriceLevel, int(cSnapshot.num_bid_levels)),
+		Asks:             make([]PriceLevel, int(cSnapshot.num_ask_levels)),
+		Spread:           float64(cSnapshot.spread),
+		MidPrice:         float64(cSnapshot.mid_price),
+		WeightedMidPrice: float64(cSnapshot.weighted_mid_price),
+		Timestamp:        time.Unix(0, int64(cSnapshot.timestamp_ns)),
+		SymbolID:         uint32(cSnapshot.symbol_id),
+	}
+
+	cBidsSlice := unsafe.Slice(cBids, int(cSnapshot.num_bid_levels))
+	for i := 0; i < int(cSnapshot.num_bid_levels); i++ {
+		snapshot.Bids[i] = PriceLevel{
+			Price:  float64(cBidsSlice[i].price),
+			Volume: float64(cBidsSlice[i].volume),
+		}
+	}
+
+	cAsksSlice := unsafe.Slice(cAsks, int(cSnapshot.num_ask_levels))
+	for i := 0; i < int(cSnapshot.num_ask_levels); i++ {
+		snapshot.Asks[i] = PriceLevel{
+			Price:  float64(cAsksSlice[i].price),
+			Volume: float64(cAsksSlice[i].volume),
+		}
+	}
+
+	return snapshot, nil
+}
+
+// GenerateSnapshotUnsorted generates an order book snapshot from unsorted orders
+//
+// This is the convenience path for scenarios where orders are unsorted
+// (e.g., batch processing of historical data, call auction order collection).
+// Orders will be automatically sorted by price.
+//
+// Parameters:
+//   - orders: Array of orders for a single symbol (can be in any order)
+//   - maxLevels: Maximum number of levels to extract per side
+//   - precisionMode: Precision mode for volume aggregation
+//   - timestamp: Snapshot timestamp
+//
+// Returns:
+//   - OrderBookSnapshot with top N levels for both bid and ask sides
+//   - error if generation fails
+//
+// Note: Input orders array will be modified (sorted in-place by side and price).
+// If orders are already sorted, use GenerateSnapshot for better performance.
+func GenerateSnapshotUnsorted(orders []Order, maxLevels uint32, precisionMode OrderBookPrecisionMode, timestamp time.Time) (*OrderBookSnapshot, error) {
+	if len(orders) == 0 {
+		return &OrderBookSnapshot{
+			Bids:      []PriceLevel{},
+			Asks:      []PriceLevel{},
+			Timestamp: timestamp,
+		}, nil
+	}
+
+	// Allocate C memory for orders to avoid Go pointer issues
+	cOrders := (*C.fc_order_t)(C.malloc(C.size_t(len(orders)) * C.size_t(unsafe.Sizeof(C.fc_order_t{}))))
+	if cOrders == nil {
+		return nil, fmt.Errorf("failed to allocate memory for orders")
+	}
+	defer C.free(unsafe.Pointer(cOrders))
+
+	// Convert Go orders to C orders
+	cOrdersSlice := unsafe.Slice(cOrders, len(orders))
+	for i, order := range orders {
+		cOrdersSlice[i].symbol_id = C.uint32_t(order.SymbolID)
+		cOrdersSlice[i].price = C.double(order.Price)
+		cOrdersSlice[i].volume = C.double(order.Volume)
+		cOrdersSlice[i].side = C.fc_orderbook_side_t(order.Side)
+		cOrdersSlice[i].timestamp_ns = C.int64_t(order.Timestamp.UnixNano())
+	}
+
+	// Allocate C memory for bids and asks
+	cBids := (*C.fc_price_level_t)(C.malloc(C.size_t(maxLevels) * C.size_t(unsafe.Sizeof(C.fc_price_level_t{}))))
+	if cBids == nil {
+		return nil, fmt.Errorf("failed to allocate memory for bids")
+	}
+	defer C.free(unsafe.Pointer(cBids))
+
+	cAsks := (*C.fc_price_level_t)(C.malloc(C.size_t(maxLevels) * C.size_t(unsafe.Sizeof(C.fc_price_level_t{}))))
+	if cAsks == nil {
+		return nil, fmt.Errorf("failed to allocate memory for asks")
+	}
+	defer C.free(unsafe.Pointer(cAsks))
+
+	// Create C snapshot structure
+	var cSnapshot C.fc_orderbook_snapshot_t
+	cSnapshot.bids = cBids
+	cSnapshot.asks = cAsks
+
+	// Call C function (unsorted version)
+	status := C.fc_orderbook_snapshot_generate_unsorted(
 		&cSnapshot,
 		cOrders,
 		C.size_t(len(orders)),

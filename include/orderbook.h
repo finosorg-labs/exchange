@@ -85,20 +85,23 @@ typedef enum {
 } fc_orderbook_precision_mode_t;
 
 /**
- * @brief Generate order book snapshot from raw orders
+ * @brief Generate order book snapshot from raw orders (pre-sorted)
  *
  * Aggregates orders at each price level and extracts top N levels for both sides.
  * Orders must be pre-sorted by price (descending for bids, ascending for asks).
  *
+ * This is the high-performance path for scenarios where orders are already sorted
+ * (e.g., extracted from an ordered data structure like a red-black tree).
+ *
  * @param[out] snapshot Output snapshot structure (caller must allocate)
- * @param[in] orders Array of orders for a single symbol
+ * @param[in] orders Array of orders for a single symbol (must be pre-sorted)
  * @param[in] num_orders Number of orders
  * @param[in] max_levels Maximum number of levels to extract per side
  * @param[in] precision_mode Precision mode for volume aggregation
  * @param[in] timestamp_ns Snapshot timestamp
  * @return FC_STATUS_OK on success, error code otherwise
  *
- * Time complexity: O(num_orders + max_levels * log(max_levels))
+ * Time complexity: O(num_orders)
  * Space complexity: O(max_levels)
  * Thread safety: Not thread-safe (caller must synchronize)
  *
@@ -107,10 +110,47 @@ typedef enum {
  * @note Orders must be sorted: bids descending by price, asks ascending by price.
  * @note If there are fewer than max_levels unique price levels, the actual
  *       number of levels will be returned in num_bid_levels/num_ask_levels.
+ * @note For unsorted orders, use fc_orderbook_snapshot_generate_unsorted instead.
  */
 FC_API fc_status_t fc_orderbook_snapshot_generate(
     fc_orderbook_snapshot_t* snapshot,
     const fc_order_t* orders,
+    size_t num_orders,
+    uint32_t max_levels,
+    fc_orderbook_precision_mode_t precision_mode,
+    int64_t timestamp_ns
+);
+
+/**
+ * @brief Generate order book snapshot from raw orders (auto-sort)
+ *
+ * Aggregates orders at each price level and extracts top N levels for both sides.
+ * Orders can be in any order - they will be automatically sorted by price.
+ *
+ * This is the convenience path for scenarios where orders are unsorted
+ * (e.g., batch processing of historical data, call auction order collection).
+ *
+ * @param[out] snapshot Output snapshot structure (caller must allocate)
+ * @param[in,out] orders Array of orders for a single symbol (will be sorted in-place)
+ * @param[in] num_orders Number of orders
+ * @param[in] max_levels Maximum number of levels to extract per side
+ * @param[in] precision_mode Precision mode for volume aggregation
+ * @param[in] timestamp_ns Snapshot timestamp
+ * @return FC_STATUS_OK on success, error code otherwise
+ *
+ * Time complexity: O(num_orders * log(num_orders))
+ * Space complexity: O(num_orders + max_levels)
+ * Thread safety: Not thread-safe (caller must synchronize)
+ *
+ * @note Caller must allocate snapshot->bids and snapshot->asks arrays
+ *       with at least max_levels elements each before calling.
+ * @note Input orders array will be modified (sorted in-place by side and price).
+ * @note If orders are already sorted, use fc_orderbook_snapshot_generate for better performance.
+ * @note Sorting uses Timsort algorithm: O(n) for nearly sorted data, O(n log n) worst case.
+ */
+FC_API fc_status_t fc_orderbook_snapshot_generate_unsorted(
+    fc_orderbook_snapshot_t* snapshot,
+    fc_order_t* orders,
     size_t num_orders,
     uint32_t max_levels,
     fc_orderbook_precision_mode_t precision_mode,
