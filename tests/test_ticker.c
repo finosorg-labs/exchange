@@ -268,6 +268,305 @@ TEST(test_ticker_bigfloat_precision) {
     fc_ticker_destroy(ctx);
 }
 
+TEST(test_ticker_update_null_context) {
+    fc_tick_t tick = {0, 100.0, 100.0, 10000.0, 1000000000LL};
+    int result = fc_ticker_update(NULL, &tick);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_ticker_update_null_tick) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    int result = fc_ticker_update(ctx, NULL);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_destroy_null) {
+    fc_ticker_destroy(NULL);
+}
+
+TEST(test_ticker_standard_precision) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_STANDARD);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick1 = {0, 100.0, 100.0, 10000.0, 1000000000LL};
+    fc_tick_t tick2 = {0, 105.0, 200.0, 21000.0, 2000000000LL};
+
+    int result = fc_ticker_update(ctx, &tick1);
+    ASSERT_EQ(result, 0);
+
+    result = fc_ticker_update(ctx, &tick2);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.volume, 300.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.amount, 31000.0, EPSILON);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_multiple_periods) {
+    int64_t periods[] = {60000000000LL, 300000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(5, 2, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick = {0, 100.0, 100.0, 10000.0, 1000000000LL};
+    int result = fc_ticker_update(ctx, &tick);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.initialized, 1);
+
+    result = fc_ticker_get_ohlcv(ctx, 0, 1, &ohlcv);
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.initialized, 1);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_get_ohlcv_invalid_symbol) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_ohlcv_t ohlcv;
+    int result = fc_ticker_get_ohlcv(ctx, 999, 0, &ohlcv);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_get_ohlcv_invalid_period) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_ohlcv_t ohlcv;
+    int result = fc_ticker_get_ohlcv(ctx, 0, 999, &ohlcv);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_get_ohlcv_null_output) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    int result = fc_ticker_get_ohlcv(ctx, 0, 0, NULL);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_get_ohlcv_null_context) {
+    fc_ohlcv_t ohlcv;
+    int result = fc_ticker_get_ohlcv(NULL, 0, 0, &ohlcv);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_ticker_reset_invalid_symbol) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    int result = fc_ticker_reset_ohlcv(ctx, 999, 0);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_reset_null_context) {
+    int result = fc_ticker_reset_ohlcv(NULL, 0, 0);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_ticker_reset_all_null_context) {
+    int result = fc_ticker_reset_all(NULL);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_ticker_get_stats_null_context) {
+    uint32_t num_symbols, num_periods;
+    int result = fc_ticker_get_stats(NULL, &num_symbols, &num_periods);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_ticker_get_stats_null_outputs) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    int result = fc_ticker_get_stats(ctx, NULL, NULL);
+    ASSERT_EQ(result, 0);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_update_batch_null_context) {
+    fc_tick_t ticks[] = {
+        {0, 100.0, 100.0, 10000.0, 1000000000LL},
+    };
+
+    int result = fc_ticker_update_batch(NULL, ticks, 1);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_ticker_update_batch_null_ticks) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    int result = fc_ticker_update_batch(ctx, NULL, 10);
+    ASSERT_EQ(result, FC_ERR_INVALID_ARG);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_update_batch_zero_count) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t ticks[] = {
+        {0, 100.0, 100.0, 10000.0, 1000000000LL},
+    };
+
+    int result = fc_ticker_update_batch(ctx, ticks, 0);
+    ASSERT_EQ(result, 0);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_many_ticks_same_period) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(1, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    for (int i = 0; i < 100; i++) {
+        fc_tick_t tick = {0, 100.0 + i, 10.0, 1000.0 + i * 10, 1000000000LL + i * 1000000LL};
+        int result = fc_ticker_update(ctx, &tick);
+        ASSERT_EQ(result, 0);
+    }
+
+    fc_ohlcv_t ohlcv;
+    int result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.tick_count, 100);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.open, 100.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.close, 199.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.high, 199.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.low, 100.0, EPSILON);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_reset_all_functionality) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(3, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    for (uint32_t sym = 0; sym < 3; sym++) {
+        fc_tick_t tick = {sym, 100.0 + sym, 100.0, 10000.0, 1000000000LL};
+        int result = fc_ticker_update(ctx, &tick);
+        ASSERT_EQ(result, 0);
+    }
+
+    int result = fc_ticker_reset_all(ctx);
+    ASSERT_EQ(result, 0);
+
+    for (uint32_t sym = 0; sym < 3; sym++) {
+        fc_ohlcv_t ohlcv;
+        result = fc_ticker_get_ohlcv(ctx, sym, 0, &ohlcv);
+        ASSERT_EQ(result, 0);
+        ASSERT_EQ(ohlcv.initialized, 0);
+    }
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_extreme_prices) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(1, 1, periods, FC_TICKER_PRECISION_BIGFLOAT);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick1 = {0, 1e-10, 1e15, 1e5, 1000000000LL};
+    fc_tick_t tick2 = {0, 1e10, 1e-15, 1e-5, 2000000000LL};
+
+    int result = fc_ticker_update(ctx, &tick1);
+    ASSERT_EQ(result, 0);
+
+    result = fc_ticker_update(ctx, &tick2);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.initialized, 1);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_update_boundary_symbol) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(10, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick = {9, 100.0, 100.0, 10000.0, 1000000000LL};
+    int result = fc_ticker_update(ctx, &tick);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 9, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(ohlcv.initialized, 1);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_zero_amount) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(1, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick = {0, 100.0, 100.0, 0.0, 1000000000LL};
+    int result = fc_ticker_update(ctx, &tick);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.amount, 0.0, EPSILON);
+
+    fc_ticker_destroy(ctx);
+}
+
+TEST(test_ticker_zero_volume) {
+    int64_t periods[] = {60000000000LL};
+    fc_ticker_ctx_t *ctx = fc_ticker_create(1, 1, periods, FC_TICKER_PRECISION_KAHAN);
+    ASSERT_NOT_NULL(ctx);
+
+    fc_tick_t tick = {0, 100.0, 0.0, 10000.0, 1000000000LL};
+    int result = fc_ticker_update(ctx, &tick);
+    ASSERT_EQ(result, 0);
+
+    fc_ohlcv_t ohlcv;
+    result = fc_ticker_get_ohlcv(ctx, 0, 0, &ohlcv);
+    ASSERT_EQ(result, 0);
+    FC_TEST_ASSERT_DOUBLE_EQ(ohlcv.volume, 0.0, EPSILON);
+
+    fc_ticker_destroy(ctx);
+}
+
 static fc_test_fn ticker_tests[] = {
     test_ticker_create_destroy,
     test_ticker_create_invalid_args,
@@ -279,6 +578,29 @@ static fc_test_fn ticker_tests[] = {
     test_ticker_invalid_period_duration,
     test_ticker_invalid_tick_data,
     test_ticker_bigfloat_precision,
+    test_ticker_update_null_context,
+    test_ticker_update_null_tick,
+    test_ticker_destroy_null,
+    test_ticker_standard_precision,
+    test_ticker_multiple_periods,
+    test_ticker_get_ohlcv_invalid_symbol,
+    test_ticker_get_ohlcv_invalid_period,
+    test_ticker_get_ohlcv_null_output,
+    test_ticker_get_ohlcv_null_context,
+    test_ticker_reset_invalid_symbol,
+    test_ticker_reset_null_context,
+    test_ticker_reset_all_null_context,
+    test_ticker_get_stats_null_context,
+    test_ticker_get_stats_null_outputs,
+    test_ticker_update_batch_null_context,
+    test_ticker_update_batch_null_ticks,
+    test_ticker_update_batch_zero_count,
+    test_ticker_many_ticks_same_period,
+    test_ticker_reset_all_functionality,
+    test_ticker_extreme_prices,
+    test_ticker_update_boundary_symbol,
+    test_ticker_zero_amount,
+    test_ticker_zero_volume,
 };
 
 static fc_test_suite_t ticker_suite = {

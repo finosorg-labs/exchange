@@ -353,6 +353,320 @@ TEST(test_snapshot_generate_comparison) {
     FC_TEST_ASSERT_DOUBLE_EQ(snapshot1.weighted_mid_price, snapshot2.weighted_mid_price, EPSILON);
 }
 
+TEST(test_aggregate_levels_bigfloat) {
+    fc_order_t orders[100];
+    for (int i = 0; i < 100; i++) {
+        orders[i].symbol_id = 0;
+        orders[i].price = 100.0;
+        orders[i].volume = 0.01;
+        orders[i].side = FC_ORDERBOOK_SIDE_BID;
+        orders[i].timestamp_ns = 0;
+    }
+
+    fc_price_level_t levels[10] = {0};
+    uint32_t num_levels;
+
+    fc_status_t status = fc_orderbook_aggregate_levels(
+        levels, &num_levels, orders, 100, FC_ORDERBOOK_PRECISION_BIGFLOAT
+    );
+
+    ASSERT_EQ(status, FC_OK);
+    ASSERT_EQ(num_levels, 1);
+    FC_TEST_ASSERT_DOUBLE_EQ(levels[0].price, 100.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(levels[0].volume, 1.0, 1e-9);
+}
+
+TEST(test_aggregate_levels_empty) {
+    fc_price_level_t levels[10];
+    uint32_t num_levels;
+
+    fc_order_t empty_orders[1] = {0};  // Dummy array to avoid NULL pointer
+
+    fc_status_t status = fc_orderbook_aggregate_levels(
+        levels, &num_levels, empty_orders, 0, FC_ORDERBOOK_PRECISION_STANDARD
+    );
+
+    ASSERT_EQ(status, FC_OK);
+    ASSERT_EQ(num_levels, 0);
+}
+
+TEST(test_aggregate_levels_invalid_precision) {
+    fc_order_t orders[] = {
+        {0, 100.0, 10.0, FC_ORDERBOOK_SIDE_BID, 0},
+    };
+
+    fc_price_level_t levels[10];
+    uint32_t num_levels;
+
+    fc_status_t status = fc_orderbook_aggregate_levels(
+        levels, &num_levels, orders, 1, 999
+    );
+
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_calculate_metrics_empty_bids) {
+    fc_price_level_t asks[3] = {
+        {100.5, 40.0},
+        {101.0, 25.0},
+        {101.5, 15.0},
+    };
+
+    fc_orderbook_snapshot_t snapshot = {
+        .bids = NULL,
+        .asks = asks,
+        .num_bid_levels = 0,
+        .num_ask_levels = 3,
+        .symbol_id = 0,
+        .timestamp_ns = 0,
+    };
+
+    fc_status_t status = fc_orderbook_calculate_metrics(&snapshot);
+
+    ASSERT_EQ(status, FC_OK);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.spread, 0.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.mid_price, 0.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.weighted_mid_price, 0.0, EPSILON);
+}
+
+TEST(test_calculate_metrics_empty_asks) {
+    fc_price_level_t bids[3] = {
+        {100.0, 50.0},
+        {99.5, 30.0},
+        {99.0, 20.0},
+    };
+
+    fc_orderbook_snapshot_t snapshot = {
+        .bids = bids,
+        .asks = NULL,
+        .num_bid_levels = 3,
+        .num_ask_levels = 0,
+        .symbol_id = 0,
+        .timestamp_ns = 0,
+    };
+
+    fc_status_t status = fc_orderbook_calculate_metrics(&snapshot);
+
+    ASSERT_EQ(status, FC_OK);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.spread, 0.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.mid_price, 0.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.weighted_mid_price, 0.0, EPSILON);
+}
+
+TEST(test_calculate_metrics_tiny_volume) {
+    fc_price_level_t bids[1] = {{100.0, 1e-15}};
+    fc_price_level_t asks[1] = {{100.5, 1e-15}};
+
+    fc_orderbook_snapshot_t snapshot = {
+        .bids = bids,
+        .asks = asks,
+        .num_bid_levels = 1,
+        .num_ask_levels = 1,
+        .symbol_id = 0,
+        .timestamp_ns = 0,
+    };
+
+    fc_status_t status = fc_orderbook_calculate_metrics(&snapshot);
+
+    ASSERT_EQ(status, FC_OK);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.mid_price, 100.25, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.weighted_mid_price, 100.25, EPSILON);
+}
+
+TEST(test_snapshot_generate_bigfloat) {
+    fc_order_t orders[100];
+    for (int i = 0; i < 50; i++) {
+        orders[i].symbol_id = 0;
+        orders[i].price = 100.0;
+        orders[i].volume = 0.01;
+        orders[i].side = FC_ORDERBOOK_SIDE_BID;
+        orders[i].timestamp_ns = 0;
+    }
+    for (int i = 50; i < 100; i++) {
+        orders[i].symbol_id = 0;
+        orders[i].price = 100.5;
+        orders[i].volume = 0.01;
+        orders[i].side = FC_ORDERBOOK_SIDE_ASK;
+        orders[i].timestamp_ns = 0;
+    }
+
+    fc_price_level_t bids[10];
+    fc_price_level_t asks[10];
+
+    fc_orderbook_snapshot_t snapshot = {
+        .bids = bids,
+        .asks = asks,
+    };
+
+    fc_status_t status = fc_orderbook_snapshot_generate(
+        &snapshot, orders, 100, 10, FC_ORDERBOOK_PRECISION_BIGFLOAT, 0
+    );
+
+    ASSERT_EQ(status, FC_OK);
+    ASSERT_EQ(snapshot.num_bid_levels, 1);
+    ASSERT_EQ(snapshot.num_ask_levels, 1);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.bids[0].volume, 0.5, 1e-9);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.asks[0].volume, 0.5, 1e-9);
+}
+
+TEST(test_snapshot_generate_null_snapshot) {
+    fc_order_t orders[] = {
+        {0, 100.0, 10.0, FC_ORDERBOOK_SIDE_BID, 0},
+    };
+
+    fc_status_t status = fc_orderbook_snapshot_generate(
+        NULL, orders, 1, 10, FC_ORDERBOOK_PRECISION_STANDARD, 0
+    );
+
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_snapshot_generate_batch_null_snapshots) {
+    fc_order_t orders[] = {
+        {0, 100.0, 10.0, FC_ORDERBOOK_SIDE_BID, 0},
+    };
+
+    fc_status_t status = fc_orderbook_snapshot_generate_batch(
+        NULL, orders, 1, 1, 10, FC_ORDERBOOK_PRECISION_STANDARD, 0
+    );
+
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_snapshot_generate_batch_empty) {
+    fc_price_level_t bids[10];
+    fc_price_level_t asks[10];
+
+    fc_orderbook_snapshot_t snapshots[1] = {
+        {.bids = bids, .asks = asks},
+    };
+
+    fc_order_t empty_orders[1] = {0};  // Dummy array to avoid NULL pointer
+
+    fc_status_t status = fc_orderbook_snapshot_generate_batch(
+        snapshots, empty_orders, 0, 1, 10, FC_ORDERBOOK_PRECISION_STANDARD, 0
+    );
+
+    ASSERT_EQ(status, FC_OK);
+    ASSERT_EQ(snapshots[0].num_bid_levels, 0);
+    ASSERT_EQ(snapshots[0].num_ask_levels, 0);
+}
+
+TEST(test_snapshot_generate_unsorted_null_snapshot) {
+    fc_order_t orders[] = {
+        {0, 100.0, 10.0, FC_ORDERBOOK_SIDE_BID, 0},
+    };
+
+    fc_status_t status = fc_orderbook_snapshot_generate_unsorted(
+        NULL, orders, 1, 10, FC_ORDERBOOK_PRECISION_STANDARD, 0
+    );
+
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_snapshot_generate_unsorted_empty) {
+    fc_price_level_t bids[10];
+    fc_price_level_t asks[10];
+
+    fc_orderbook_snapshot_t snapshot = {
+        .bids = bids,
+        .asks = asks,
+    };
+
+    fc_order_t empty_orders[1];  // Dummy array to avoid NULL pointer
+
+    fc_status_t status = fc_orderbook_snapshot_generate_unsorted(
+        &snapshot, empty_orders, 0, 10, FC_ORDERBOOK_PRECISION_STANDARD, 0
+    );
+
+    ASSERT_EQ(status, FC_OK);
+    ASSERT_EQ(snapshot.num_bid_levels, 0);
+    ASSERT_EQ(snapshot.num_ask_levels, 0);
+}
+
+TEST(test_aggregate_levels_many_price_levels) {
+    fc_order_t orders[100];
+    for (int i = 0; i < 100; i++) {
+        orders[i].symbol_id = 0;
+        orders[i].price = 100.0 + i * 0.1;
+        orders[i].volume = 10.0;
+        orders[i].side = FC_ORDERBOOK_SIDE_BID;
+        orders[i].timestamp_ns = 0;
+    }
+
+    fc_price_level_t levels[150];
+    uint32_t num_levels;
+
+    fc_status_t status = fc_orderbook_aggregate_levels(
+        levels, &num_levels, orders, 100, FC_ORDERBOOK_PRECISION_STANDARD
+    );
+
+    ASSERT_EQ(status, FC_OK);
+    ASSERT_EQ(num_levels, 100);
+}
+
+TEST(test_calculate_metrics_large_volumes) {
+    fc_price_level_t bids[1] = {{100.0, 1e15}};
+    fc_price_level_t asks[1] = {{100.5, 1e15}};
+
+    fc_orderbook_snapshot_t snapshot = {
+        .bids = bids,
+        .asks = asks,
+        .num_bid_levels = 1,
+        .num_ask_levels = 1,
+        .symbol_id = 0,
+        .timestamp_ns = 0,
+    };
+
+    fc_status_t status = fc_orderbook_calculate_metrics(&snapshot);
+
+    ASSERT_EQ(status, FC_OK);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.spread, 0.5, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(snapshot.mid_price, 100.25, EPSILON);
+}
+
+TEST(test_snapshot_generate_batch_multiple_symbols) {
+    fc_order_t orders[12];
+    for (int sym = 0; sym < 3; sym++) {
+        for (int i = 0; i < 2; i++) {
+            orders[sym * 4 + i].symbol_id = sym;
+            orders[sym * 4 + i].price = 100.0 + sym * 100.0 - i * 0.5;
+            orders[sym * 4 + i].volume = 10.0;
+            orders[sym * 4 + i].side = FC_ORDERBOOK_SIDE_BID;
+            orders[sym * 4 + i].timestamp_ns = 0;
+        }
+        for (int i = 0; i < 2; i++) {
+            orders[sym * 4 + 2 + i].symbol_id = sym;
+            orders[sym * 4 + 2 + i].price = 100.5 + sym * 100.0 + i * 0.5;
+            orders[sym * 4 + 2 + i].volume = 10.0;
+            orders[sym * 4 + 2 + i].side = FC_ORDERBOOK_SIDE_ASK;
+            orders[sym * 4 + 2 + i].timestamp_ns = 0;
+        }
+    }
+
+    fc_price_level_t bids0[10], asks0[10];
+    fc_price_level_t bids1[10], asks1[10];
+    fc_price_level_t bids2[10], asks2[10];
+
+    fc_orderbook_snapshot_t snapshots[3] = {
+        {.bids = bids0, .asks = asks0},
+        {.bids = bids1, .asks = asks1},
+        {.bids = bids2, .asks = asks2},
+    };
+
+    fc_status_t status = fc_orderbook_snapshot_generate_batch(
+        snapshots, orders, 12, 3, 10, FC_ORDERBOOK_PRECISION_KAHAN, 0
+    );
+
+    ASSERT_EQ(status, FC_OK);
+
+    for (uint32_t sym = 0; sym < 3; sym++) {
+        ASSERT_EQ(snapshots[sym].symbol_id, sym);
+        ASSERT_EQ(snapshots[sym].num_bid_levels, 2);
+        ASSERT_EQ(snapshots[sym].num_ask_levels, 2);
+    }
+}
+
 void register_order_book_tests(void) {
     RUN_TEST(test_aggregate_levels_basic);
     RUN_TEST(test_aggregate_levels_kahan);
@@ -364,4 +678,19 @@ void register_order_book_tests(void) {
     RUN_TEST(test_invalid_arguments);
     RUN_TEST(test_snapshot_generate_unsorted);
     RUN_TEST(test_snapshot_generate_comparison);
+    RUN_TEST(test_aggregate_levels_bigfloat);
+    RUN_TEST(test_aggregate_levels_empty);
+    RUN_TEST(test_aggregate_levels_invalid_precision);
+    RUN_TEST(test_calculate_metrics_empty_bids);
+    RUN_TEST(test_calculate_metrics_empty_asks);
+    RUN_TEST(test_calculate_metrics_tiny_volume);
+    RUN_TEST(test_snapshot_generate_bigfloat);
+    RUN_TEST(test_snapshot_generate_null_snapshot);
+    RUN_TEST(test_snapshot_generate_batch_null_snapshots);
+    RUN_TEST(test_snapshot_generate_batch_empty);
+    RUN_TEST(test_snapshot_generate_unsorted_null_snapshot);
+    RUN_TEST(test_snapshot_generate_unsorted_empty);
+    RUN_TEST(test_aggregate_levels_many_price_levels);
+    RUN_TEST(test_calculate_metrics_large_volumes);
+    RUN_TEST(test_snapshot_generate_batch_multiple_symbols);
 }
