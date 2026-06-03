@@ -15,7 +15,11 @@ add_executable(exchange_tests
 # Link with exchange library
 target_link_libraries(exchange_tests
     PRIVATE
-        finkit_exchange_static
+        finkit_exchange_static_base
+        finkit::stats
+      finkit::sort
+        finkit::ds
+        finkit::platform
         m
 )
 

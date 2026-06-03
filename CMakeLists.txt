@@ -168,29 +168,125 @@ target_compile_definitions(finkit_exchange PRIVATE FC_STATIC_BUILD)
 # Note: SIMD dispatch is handled via __attribute__((target(...))) in source files
 # No global SIMD flags needed - each function specifies its own target ISA
 
-# Create static library
-add_library(finkit_exchange_static STATIC $<TARGET_OBJECTS:finkit_exchange>)
-target_include_directories(finkit_exchange_static
+# Create base static library (without dependencies)
+add_library(finkit_exchange_static_base STATIC $<TARGET_OBJECTS:finkit_exchange>)
+target_include_directories(finkit_exchange_static_base
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
 
-# Link platform, ds, stats and math library
-target_link_libraries(finkit_exchange_static PUBLIC finkit::platform finkit::ds finkit::sort finkit::stats m gcov)
+# Determine exchange build directory
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+     set(EXCHANGE_BUILD_DIR "darwin_arm64")
+    else()
+        set(EXCHANGE_BUILD_DIR "darwin_x86_64")
+  endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(EXCHANGE_BUILD_DIR "linux_amd64")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(EXCHANGE_BUILD_DIR "windows_amd64")
+endif()
+
+# Merge static libraries into a single library
+set(MERGED_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}/libfinkit_exchange_static.a)
+set(STATS_LIB_PATH "${STATS_BUILD_DIR}/libfinkit_stats_static.a")
+set(SORT_LIB_PATH "${SORT_BUILD_DIR}/libfinkit_sort_static.a")
+set(DS_LIB_PATH "${DS_BUILD_DIR}/libfinkit_ds_static.a")
+set(PLATFORM_LIB_PATH "${PLATFORM_BUILD_DIR}/libfinkit_platform_static.a")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    # Windows: use lib.exe to merge libraries
+    add_custom_command(
+        OUTPUT ${MERGED_LIB_PATH}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}
+     COMMAND lib.exe /OUT:${MERGED_LIB_PATH}
+            $<TARGET_FILE:finkit_exchange_static_base>
+            ${STATS_LIB_PATH}
+        ${SORT_LIB_PATH}
+            ${DS_LIB_PATH}
+            ${PLATFORM_LIB_PATH}
+        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${PLATFORM_LIB_PATH}
+     COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
+        VERBATIM
+  )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # macOS: use libtool to merge libraries
+    add_custom_command(
+        OUTPUT ${MERGED_LIB_PATH}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}
+        COMMAND libtool -static -o ${MERGED_LIB_PATH}
+            $<TARGET_FILE:finkit_exchange_static_base>
+            ${STATS_LIB_PATH}
+          ${SORT_LIB_PATH}
+          ${DS_LIB_PATH}
+            ${PLATFORM_LIB_PATH}
+        2>&1 | grep -v "warning duplicate member name" || true
+        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${PLATFORM_LIB_PATH}
+        COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
+        VERBATIM
+    )
+else()
+    # Linux: use ar with MRI script to merge libraries
+    set(MRI_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/merge_libs.mri)
+    file(GENERATE OUTPUT ${MRI_SCRIPT} CONTENT
+"CREATE ${MERGED_LIB_PATH}
+ADDLIB $<TARGET_FILE:finkit_exchange_static_base>
+ADDLIB ${STATS_LIB_PATH}
+ADDLIB ${SORT_LIB_PATH}
+ADDLIB ${DS_LIB_PATH}
+ADDLIB ${PLATFORM_LIB_PATH}
+SAVE
+END
+")
+
+    add_custom_command(
+        OUTPUT ${MERGED_LIB_PATH}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}
+        COMMAND ${CMAKE_AR} -M < ${MRI_SCRIPT}
+     DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${PLATFORM_LIB_PATH} ${MRI_SCRIPT}
+        COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
+        VERBATIM
+    )
+endif()
+
+# Create custom target to trigger the merge
+add_custom_target(finkit_exchange_static ALL
+    DEPENDS ${MERGED_LIB_PATH}
+    COMMAND ${CMAKE_COMMAND} -E echo "Merged library created at: ${MERGED_LIB_PATH}"
+)
+
+# Create interface library for linking
+add_library(finkit_exchange_static_interface INTERFACE)
+target_include_directories(finkit_exchange_static_interface
+    INTERFACE
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(finkit_exchange_static_interface
+    INTERFACE
+        m
+        gcov
+        ${MERGED_LIB_PATH}
+)
 
 # Create alias
-add_library(finkit::exchange ALIAS finkit_exchange_static)
+add_library(finkit::exchange ALIAS finkit_exchange_static_interface)
 
-# Install
-install(TARGETS finkit_exchange_static
-    EXPORT finkit-exchange-targets
-    ARCHIVE DESTINATION lib
+# Install merged static library
+install(FILES ${MERGED_LIB_PATH}
+    DESTINATION lib
 )
 
 install(DIRECTORY include/
     DESTINATION include/exchange
     FILES_MATCHING PATTERN "*.h"
+)
+
+# Install interface library target
+install(TARGETS finkit_exchange_static_interface
+    EXPORT finkit-exchange-targets
 )
 
 install(EXPORT finkit-exchange-targets

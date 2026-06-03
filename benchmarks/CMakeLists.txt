@@ -16,7 +16,11 @@ target_include_directories(bench_framework
 
 target_link_libraries(bench_framework
     PUBLIC
-        finkit_exchange_static
+        finkit_exchange_static_base
+        finkit::stats
+      finkit::sort
+        finkit::ds
+        finkit::platform
 )
 
 # Benchmark executable
@@ -32,7 +36,11 @@ add_executable(exchange_benchmarks
 target_link_libraries(exchange_benchmarks
     PRIVATE
         bench_framework
-        finkit_exchange_static
+        finkit_exchange_static_base
+        finkit::stats
+      finkit::sort
+        finkit::ds
+        finkit::platform
         m
 )
 
