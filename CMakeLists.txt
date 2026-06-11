@@ -148,6 +148,7 @@ set(EXCHANGE_SOURCES
     exchange-c/ticker.c
     exchange-c/ticker_merge.c
     exchange-c/orderbook.c
+    exchange-c/market_indicators.c
 )
 
 # Create object library

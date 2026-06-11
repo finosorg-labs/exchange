@@ -41,6 +41,7 @@ package exchange
 #include "ticker_merge.h"
 #include "generic_ring_buffer.h"
 #include "orderbook.h"
+#include "market_indicators.h"
 
 // Platform sources (dependency)
 #include "simd_detect.c"
@@ -65,6 +66,7 @@ package exchange
 #include "exchange-c/ticker.c"
 #include "exchange-c/ticker_merge.c"
 #include "exchange-c/orderbook.c"
+#include "exchange-c/market_indicators.c"
 
 int fc_init(void);
 void fc_cleanup(void);

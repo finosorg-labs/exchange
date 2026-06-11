@@ -321,6 +321,10 @@ func codeToError(code C.int) error {
 	switch code {
 	case C.FC_ERR_INVALID_ARG:
 		return errors.New("invalid argument")
+	case C.FC_ERR_NAN_INPUT:
+		return errors.New("input contains NaN")
+	case C.FC_ERR_OUT_OF_MEMORY:
+		return errors.New("out of memory")
 	default:
 		return errors.New("unknown error")
 	}
