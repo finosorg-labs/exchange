@@ -94,6 +94,31 @@ func TestMarketIndicatorsUpdateBatch(t *testing.T) {
 	assertClose(t, values.BuySellPressureRatio, 25.0/15.0)
 }
 
+func TestMarketIndicatorsBigfloatPrecision(t *testing.T) {
+	m, err := NewMarketIndicators(1, time.Minute, PrecisionBigfloat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+
+	base := time.Unix(0, 0)
+	trades := []MarketTrade{
+		marketTrade(0, 100, 10, 5, 5, base),
+		marketTrade(0, 110, 20, 10, 10, base.Add(10*time.Second)),
+	}
+	if err := m.UpdateBatch(trades); err != nil {
+		t.Fatalf("UpdateBatch failed: %v", err)
+	}
+
+	values, err := m.Get(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertClose(t, values.VWAP, (100*10+110*20)/30.0)
+	assertClose(t, values.TWAP, 100)
+	assertClose(t, values.BuySellPressureRatio, 1)
+}
+
 func TestMarketIndicatorsMultipleSymbolsAndGetAll(t *testing.T) {
 	m, err := NewMarketIndicators(3, time.Minute, PrecisionStandard)
 	if err != nil {

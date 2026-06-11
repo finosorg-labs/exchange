@@ -84,6 +84,26 @@ TEST(test_market_indicators_multiple_trades) {
     fc_market_indicators_destroy(ctx);
 }
 
+TEST(test_market_indicators_bigfloat_precision) {
+    fc_market_indicators_ctx_t* ctx =
+        fc_market_indicators_create(1, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_BIGFLOAT);
+    FC_TEST_ASSERT_NOT_NULL(ctx);
+
+    fc_market_trade_t trades[] = {
+        trade(0, 100.0, 10.0, 5.0, 5.0, 0),
+        trade(0, 110.0, 20.0, 10.0, 10.0, 10 * SECOND_NS),
+    };
+    ASSERT_EQ(fc_market_indicators_update_batch(ctx, trades, 2), FC_OK);
+
+    fc_market_indicators_t out;
+    ASSERT_EQ(fc_market_indicators_get(ctx, 0, &out), FC_OK);
+    FC_TEST_ASSERT_DOUBLE_EQ(out.vwap, (100.0 * 10.0 + 110.0 * 20.0) / 30.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(out.twap, 100.0, EPSILON);
+    FC_TEST_ASSERT_DOUBLE_EQ(out.buy_sell_pressure_ratio, 1.0, EPSILON);
+
+    fc_market_indicators_destroy(ctx);
+}
+
 TEST(test_market_indicators_multiple_symbols) {
     fc_market_indicators_ctx_t* ctx =
         fc_market_indicators_create(3, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_STANDARD);
@@ -209,6 +229,7 @@ void register_market_indicators_tests(void) {
     RUN_TEST(test_market_indicators_create_destroy);
     RUN_TEST(test_market_indicators_single_trade);
     RUN_TEST(test_market_indicators_multiple_trades);
+    RUN_TEST(test_market_indicators_bigfloat_precision);
     RUN_TEST(test_market_indicators_multiple_symbols);
     RUN_TEST(test_market_indicators_window_rollover);
     RUN_TEST(test_market_indicators_validation);
