@@ -5,6 +5,7 @@
 
 #include "bench_framework.h"
 #include "market_indicators.h"
+#include "simd_detect.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -179,11 +180,104 @@ static void bench_full_market_ranking(void) {
     fc_market_indicators_destroy(ctx);
 }
 
+typedef struct {
+    fc_market_indicators_ctx_t* ctx;
+    fc_market_trade_t* trades;
+    size_t num_trades;
+    int force_scalar;
+} bench_update_batch_data_t;
+
+static void bench_update_batch_fn(void* user_data) {
+    bench_update_batch_data_t* data = (bench_update_batch_data_t*)user_data;
+    fc_simd_level_t saved = g_fc_simd_level;
+    if (data->force_scalar) {
+        g_fc_simd_level = FC_SIMD_SCALAR;
+    }
+    fc_market_indicators_reset_all(data->ctx);
+    fc_market_indicators_update_batch(data->ctx, data->trades, data->num_trades);
+    g_fc_simd_level = saved;
+}
+
+static void bench_update_batch_at_scale(
+    size_t num_trades, uint32_t num_symbols,
+    fc_market_indicators_precision_mode_t precision,
+    const char* label)
+{
+    fc_market_indicators_ctx_t* ctx =
+        fc_market_indicators_create(num_symbols, 60 * SECOND_NS, precision);
+    if (ctx == NULL) {
+        fprintf(stderr, "Failed to create context for %s\n", label);
+        return;
+    }
+
+    fc_market_trade_t* trades =
+        (fc_market_trade_t*)malloc(num_trades * sizeof(fc_market_trade_t));
+    generate_market_trades(trades, num_trades, num_symbols);
+
+    /* SIMD run */
+    bench_update_batch_data_t simd_data = {
+        .ctx = ctx, .trades = trades, .num_trades = num_trades, .force_scalar = 0};
+    fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
+    char name_buf[128];
+    snprintf(name_buf, sizeof(name_buf), "%s_simd", label);
+    config.name = name_buf;
+    config.data_size = num_trades * sizeof(fc_market_trade_t);
+    config.min_time_ms = 100.0;
+
+    fc_bench_result_t simd_result;
+    fc_bench_run(&config, bench_update_batch_fn, &simd_data, &simd_result);
+
+    /* Scalar run */
+    bench_update_batch_data_t scalar_data = {
+        .ctx = ctx, .trades = trades, .num_trades = num_trades, .force_scalar = 1};
+    snprintf(name_buf, sizeof(name_buf), "%s_scalar", label);
+    config.name = name_buf;
+
+    fc_bench_result_t scalar_result;
+    fc_bench_run(&config, bench_update_batch_fn, &scalar_data, &scalar_result);
+
+    fc_bench_result_print(&simd_result);
+    fc_bench_result_print(&scalar_result);
+
+    double simd_ns_per_trade  = simd_result.mean_ns / (double)num_trades;
+    double scalar_ns_per_trade = scalar_result.mean_ns / (double)num_trades;
+    double mtrades_simd   = (double)num_trades / simd_result.mean_ns / 1000.0;
+    double mtrades_scalar = (double)num_trades / scalar_result.mean_ns / 1000.0;
+    double speedup = scalar_result.mean_ns / simd_result.mean_ns;
+
+    printf("  %-24s  simd_ns/trade=%.2f  scalar_ns/trade=%.2f  "
+           "simd=%.1f Mt/s  scalar=%.1f Mt/s  speedup=%.2fx\n",
+           label, simd_ns_per_trade, scalar_ns_per_trade,
+           mtrades_simd, mtrades_scalar, speedup);
+
+    free(trades);
+    fc_market_indicators_destroy(ctx);
+}
+
+static void bench_update_batch_compare(void) {
+    const uint32_t num_symbols = 64;
+    const size_t scales[] = {1000, 10000, 100000};
+    const char* scale_labels[] = {"batch_64sym_1K", "batch_64sym_10K", "batch_64sym_100K"};
+
+    for (int i = 0; i < 3; i++) {
+        bench_update_batch_at_scale(
+            scales[i], num_symbols, FC_MARKET_INDICATORS_PRECISION_KAHAN, scale_labels[i]);
+    }
+
+    bench_update_batch_at_scale(
+        100000, num_symbols, FC_MARKET_INDICATORS_PRECISION_STANDARD, "batch_64sym_100K_standard");
+}
+
 void bench_market_indicators_run(void) {
     srand(42);
+#if FC_ARCH_X86_64
+    fc_init();
+#endif
     printf("\n=== Market Indicators Benchmarks ===\n");
     bench_single_symbol_update();
     bench_full_market_update();
     bench_full_market_get_all();
     bench_full_market_ranking();
+    printf("\n--- SIMD vs Scalar Comparison ---\n");
+    bench_update_batch_compare();
 }
