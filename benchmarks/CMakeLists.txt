@@ -31,6 +31,7 @@ add_executable(exchange_benchmarks
     bench_ticker_merge.c
     bench_orderbook.c
     bench_market_indicators.c
+    bench_ofi.c
 )
 
 # Link with benchmark framework and exchange library

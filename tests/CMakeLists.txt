@@ -11,6 +11,7 @@ add_executable(exchange_tests
     test_ticker_merge.c
     test_orderbook.c
     test_market_indicators.c
+    test_ofi.c
 )
 
 # Link with exchange library
