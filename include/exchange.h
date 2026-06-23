@@ -9,6 +9,11 @@
 #ifndef FC_EXCHANGE_H
 #define FC_EXCHANGE_H
 
+#include "signal/kyle_lambda.h"
+#include "signal/microprice.h"
+#include "signal/ofi.h"
+#include "signal/spread.h"
+#include "signal/vwap_dev.h"
 #include "ticker.h"
 
 #ifdef __cplusplus

@@ -19,6 +19,7 @@ extern void bench_ofi_run(void);
 extern void bench_microprice_run(void);
 extern void bench_spread_run(void);
 extern void bench_vwap_dev_run(void);
+extern void bench_kyle_lambda_run(void);
 
 /* Entry point for exchange benchmarks */
 void bench_exchange_run(void) {
@@ -37,6 +38,7 @@ void bench_exchange_run(void) {
     bench_microprice_run();
     bench_spread_run();
     bench_vwap_dev_run();
+    bench_kyle_lambda_run();
 
     printf("\n");
     printf("============================================================\n");

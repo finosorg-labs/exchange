@@ -181,6 +181,7 @@ set(EXCHANGE_SOURCES
     exchange-c/signal-c/microprice.c
     exchange-c/signal-c/spread.c
     exchange-c/signal-c/vwap_dev.c
+    exchange-c/signal-c/kyle_lambda.c
 )
 
 # Create object library

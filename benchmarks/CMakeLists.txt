@@ -36,6 +36,7 @@ add_executable(exchange_benchmarks
     bench_microprice.c
     bench_spread.c
     bench_vwap_dev.c
+    bench_kyle_lambda.c
 )
 
 # Link with benchmark framework and exchange library
