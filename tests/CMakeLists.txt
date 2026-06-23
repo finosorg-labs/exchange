@@ -22,6 +22,7 @@ target_link_libraries(exchange_tests
         finkit::stats
       finkit::sort
         finkit::ds
+        finkit::math
         finkit::platform
         m
 )

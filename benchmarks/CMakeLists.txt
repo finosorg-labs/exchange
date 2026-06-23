@@ -20,6 +20,7 @@ target_link_libraries(bench_framework
         finkit::stats
       finkit::sort
         finkit::ds
+        finkit::math
         finkit::platform
 )
 
@@ -43,6 +44,7 @@ target_link_libraries(exchange_benchmarks
         finkit::stats
       finkit::sort
         finkit::ds
+        finkit::math
         finkit::platform
         m
 )

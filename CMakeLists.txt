@@ -143,6 +143,34 @@ if(NOT TARGET finkit::stats)
     add_library(finkit::stats ALIAS finkit_stats_static)
 endif()
 
+# Use prebuilt math library
+if(NOT TARGET finkit::math)
+    # Detect math
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+            set(MATH_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/math/build/darwin_arm64")
+        else()
+            set(MATH_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/math/build/darwin_x86_64")
+        endif()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(MATH_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/math/build/linux_amd64")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(MATH_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/math/build/windows_amd64")
+    else()
+        message(FATAL_ERROR "Unsupported math: ${CMAKE_SYSTEM_NAME}")
+    endif()
+
+    # Import prebuilt math library
+    add_library(finkit_math_static STATIC IMPORTED)
+    set_target_properties(finkit_math_static PROPERTIES
+        IMPORTED_LOCATION "${MATH_BUILD_DIR}/libfinkit_math_static.a"
+    )
+    target_include_directories(finkit_math_static INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/modules/math/include"
+    )
+    add_library(finkit::math ALIAS finkit_math_static)
+endif()
+
 # exchange module sources
 set(EXCHANGE_SOURCES
     exchange-c/ticker.c
@@ -163,6 +191,7 @@ target_include_directories(finkit_exchange
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/math/include>
         $<INSTALL_INTERFACE:include>
 )
 
@@ -197,6 +226,7 @@ set(MERGED_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}/libf
 set(STATS_LIB_PATH "${STATS_BUILD_DIR}/libfinkit_stats_static.a")
 set(SORT_LIB_PATH "${SORT_BUILD_DIR}/libfinkit_sort_static.a")
 set(DS_LIB_PATH "${DS_BUILD_DIR}/libfinkit_ds_static.a")
+set(MATH_LIB_PATH "${MATH_BUILD_DIR}/libfinkit_math_static.a")
 set(PLATFORM_LIB_PATH "${PLATFORM_BUILD_DIR}/libfinkit_platform_static.a")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -209,8 +239,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
             ${STATS_LIB_PATH}
         ${SORT_LIB_PATH}
             ${DS_LIB_PATH}
+            ${MATH_LIB_PATH}
             ${PLATFORM_LIB_PATH}
-        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${PLATFORM_LIB_PATH}
+        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH}
      COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
         VERBATIM
   )
@@ -224,9 +255,10 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
             ${STATS_LIB_PATH}
           ${SORT_LIB_PATH}
           ${DS_LIB_PATH}
+            ${MATH_LIB_PATH}
             ${PLATFORM_LIB_PATH}
         2>&1 | grep -v "warning duplicate member name" || true
-        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${PLATFORM_LIB_PATH}
+        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH}
         COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
         VERBATIM
     )
@@ -239,6 +271,7 @@ ADDLIB $<TARGET_FILE:finkit_exchange_static_base>
 ADDLIB ${STATS_LIB_PATH}
 ADDLIB ${SORT_LIB_PATH}
 ADDLIB ${DS_LIB_PATH}
+ADDLIB ${MATH_LIB_PATH}
 ADDLIB ${PLATFORM_LIB_PATH}
 SAVE
 END
@@ -248,7 +281,7 @@ END
         OUTPUT ${MERGED_LIB_PATH}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}
         COMMAND ${CMAKE_AR} -M < ${MRI_SCRIPT}
-     DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${PLATFORM_LIB_PATH} ${MRI_SCRIPT}
+     DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH} ${MRI_SCRIPT}
         COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
         VERBATIM
     )
