@@ -16,6 +16,7 @@ extern void bench_ticker_merge_run(void);
 extern void bench_order_book_run(void);
 extern void bench_market_indicators_run(void);
 extern void bench_ofi_run(void);
+extern void bench_microprice_run(void);
 
 /* Entry point for exchange benchmarks */
 void bench_exchange_run(void) {
@@ -31,6 +32,7 @@ void bench_exchange_run(void) {
     bench_order_book_run();
     bench_market_indicators_run();
     bench_ofi_run();
+    bench_microprice_run();
 
     printf("\n");
     printf("============================================================\n");

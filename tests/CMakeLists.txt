@@ -12,6 +12,7 @@ add_executable(exchange_tests
     test_orderbook.c
     test_market_indicators.c
     test_ofi.c
+    test_microprice.c
 )
 
 # Link with exchange library

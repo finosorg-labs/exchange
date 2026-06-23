@@ -32,6 +32,7 @@ add_executable(exchange_benchmarks
     bench_orderbook.c
     bench_market_indicators.c
     bench_ofi.c
+    bench_microprice.c
 )
 
 # Link with benchmark framework and exchange library

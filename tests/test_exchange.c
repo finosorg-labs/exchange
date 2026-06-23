@@ -14,6 +14,7 @@ extern void register_ticker_merge_tests(void);
 extern void register_order_book_tests(void);
 extern void register_market_indicators_tests(void);
 extern void register_ofi_tests(void);
+extern void register_microprice_tests(void);
 
 /* Entry point for exchange tests */
 void register_exchange_tests(void) {
@@ -23,4 +24,5 @@ void register_exchange_tests(void) {
     register_order_book_tests();
     register_market_indicators_tests();
     register_ofi_tests();
+    register_microprice_tests();
 }

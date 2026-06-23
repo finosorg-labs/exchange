@@ -7,6 +7,15 @@
 [submodule "modules/sort"]
 	path = modules/sort
 	url = https://github.com/finosorg-labs/sort.git
+[submodule "modules/math"]
+	path = modules/math
+	url = https://github.com/finosorg-labs/math.git
 [submodule "modules/stats"]
 	path = modules/stats
 	url = https://github.com/finosorg-labs/stats.git
+[submodule "modules/matrix"]
+	path = modules/matrix
+	url = https://github.com/finosorg-labs/matrix.git
+[submodule "modules/optim"]
+	path = modules/optim
+	url = https://github.com/finosorg-labs/optim.git
