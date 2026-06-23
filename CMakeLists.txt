@@ -179,6 +179,7 @@ set(EXCHANGE_SOURCES
     exchange-c/market_indicators.c
     exchange-c/signal-c/ofi.c
     exchange-c/signal-c/microprice.c
+    exchange-c/signal-c/spread.c
 )
 
 # Create object library

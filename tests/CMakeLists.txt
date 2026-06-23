@@ -13,6 +13,7 @@ add_executable(exchange_tests
     test_market_indicators.c
     test_ofi.c
     test_microprice.c
+    test_spread.c
 )
 
 # Link with exchange library
