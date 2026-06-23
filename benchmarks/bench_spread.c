@@ -5,8 +5,8 @@
 
 #include "signal/spread.h"
 #include "bench_framework.h"
-#include <platform.h>
-#include <mem_aligned.h>
+#include "platform.h"
+#include "mem_aligned.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

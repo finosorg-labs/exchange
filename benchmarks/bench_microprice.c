@@ -5,8 +5,8 @@
 
 #include "signal/microprice.h"
 #include "bench_framework.h"
-#include <platform.h>
-#include <mem_aligned.h>
+#include "platform.h"
+#include "mem_aligned.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

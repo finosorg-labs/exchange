@@ -5,8 +5,9 @@
 
 #include "signal/spread.h"
 #include "test_framework.h"
+#include "arena.h"
 #include "error.h"
-#include <platform.h>
+#include "platform.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -62,9 +63,9 @@ TEST(test_eff_spread_large_batch) {
 }
 
 TEST(test_eff_spread_null_input) {
-    double eff_out[10];
-    double trade_price[10];
-    double micro_price[10];
+    double eff_out[10] = {0};
+    double trade_price[10] = {0};
+    double micro_price[10] = {0};
 
     FC_TEST_ASSERT_EQ(fc_ex_sig_eff_spread_batch(NULL, trade_price, micro_price, 10), FC_ERR_INVALID_ARG);
     FC_TEST_ASSERT_EQ(fc_ex_sig_eff_spread_batch(eff_out, NULL, micro_price, 10), FC_ERR_INVALID_ARG);
@@ -136,9 +137,9 @@ TEST(test_amihud_large_batch) {
 }
 
 TEST(test_amihud_null_input) {
-    double illiq_out[10];
-    double returns[10];
-    double volume[10];
+    double illiq_out[10] = {0};
+    double returns[10] = {0};
+    double volume[10] = {0};
 
     FC_TEST_ASSERT_EQ(fc_ex_sig_amihud_batch(NULL, returns, volume, 10), FC_ERR_INVALID_ARG);
     FC_TEST_ASSERT_EQ(fc_ex_sig_amihud_batch(illiq_out, NULL, volume, 10), FC_ERR_INVALID_ARG);
@@ -176,6 +177,105 @@ TEST(test_amihud_nan_inf) {
     ASSERT_TRUE(isnan(illiq_out[3]));
 }
 
+
+TEST(test_eff_spread_rolling_mean) {
+    const size_t n = 10;
+    double trade_price[10] = {100.5, 100.3, 100.7, 100.2, 100.6, 100.4, 100.8, 100.1, 100.5, 100.3};
+    double micro_price[10] = {100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0};
+    double rolling_mean[10];
+    size_t window_size = 3;
+
+    fc_arena_t* arena = fc_arena_create(n * sizeof(double));
+    FC_TEST_ASSERT(arena != NULL);
+
+    fc_status_t status = fc_ex_sig_eff_spread_rolling_mean(rolling_mean, trade_price, micro_price, arena, n, window_size);
+
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* First element: window [0:0] */
+    FC_TEST_ASSERT_DOUBLE_EQ(rolling_mean[0], 1.0, 1e-10);  // 2 * |100.5 - 100.0| = 1.0
+
+    /* Second element: window [0:1], mean of (1.0, 0.6) */
+    FC_TEST_ASSERT_DOUBLE_EQ(rolling_mean[1], 0.8, 1e-10);  // (1.0 + 0.6) / 2
+
+    /* Third element: window [0:2], mean of (1.0, 0.6, 1.4) */
+    FC_TEST_ASSERT_DOUBLE_EQ(rolling_mean[2], 1.0, 1e-10);  // (1.0 + 0.6 + 1.4) / 3
+
+    /* Fourth element: window [1:3], mean of (0.6, 1.4, 0.4) */
+    FC_TEST_ASSERT_DOUBLE_EQ(rolling_mean[3], 0.8, 1e-10);  // (0.6 + 1.4 + 0.4) / 3
+
+    fc_arena_destroy(arena);
+}
+
+TEST(test_eff_spread_rolling_stddev) {
+    const size_t n = 10;
+    double trade_price[10] = {100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5};
+    double micro_price[10] = {100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0};
+    double rolling_stddev[10];
+    size_t window_size = 3;
+
+    fc_arena_t* arena = fc_arena_create(n * sizeof(double));
+    FC_TEST_ASSERT(arena != NULL);
+
+    fc_status_t status = fc_ex_sig_eff_spread_rolling_stddev(rolling_stddev, trade_price, micro_price, arena, n, window_size);
+
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* All values are constant (1.0), so stddev should be 0 */
+    for (size_t i = 2; i < n; i++) {
+        FC_TEST_ASSERT_DOUBLE_EQ(rolling_stddev[i], 0.0, 1e-10);
+    }
+
+    fc_arena_destroy(arena);
+}
+
+TEST(test_amihud_rolling_mean) {
+    const size_t n = 10;
+    double returns[10] = {0.01, 0.02, 0.015, 0.01, 0.02, 0.015, 0.01, 0.02, 0.015, 0.01};
+    double volume[10] = {1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0};
+    double rolling_mean[10];
+    size_t window_size = 3;
+
+    fc_arena_t* arena = fc_arena_create(n * sizeof(double));
+    FC_TEST_ASSERT(arena != NULL);
+
+    fc_status_t status = fc_ex_sig_amihud_rolling_mean(rolling_mean, returns, volume, arena, n, window_size);
+
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* First element: 0.01 / 1000.0 = 0.00001 */
+    FC_TEST_ASSERT_DOUBLE_EQ(rolling_mean[0], 0.00001, 1e-10);
+
+    /* Third element: mean of (0.00001, 0.00002, 0.000015) */
+    double expected_third = (0.00001 + 0.00002 + 0.000015) / 3.0;
+    FC_TEST_ASSERT_DOUBLE_EQ(rolling_mean[2], expected_third, 1e-10);
+
+    fc_arena_destroy(arena);
+}
+
+TEST(test_rolling_invalid_window) {
+    double trade_price[10] = {0};
+    double micro_price[10] = {0};
+    double rolling_mean[10] = {0};
+
+    fc_arena_t* arena = fc_arena_create(10 * sizeof(double));
+    FC_TEST_ASSERT(arena != NULL);
+
+    /* Window size = 0 should fail */
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_eff_spread_rolling_mean(rolling_mean, trade_price, micro_price, arena, 10, 0),
+        FC_ERR_INVALID_ARG
+    );
+
+    /* Window size > n should fail */
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_eff_spread_rolling_mean(rolling_mean, trade_price, micro_price, arena, 10, 11),
+        FC_ERR_INVALID_ARG
+    );
+
+    fc_arena_destroy(arena);
+}
+
 void register_spread_tests(void) {
     RUN_TEST(test_eff_spread_basic);
     RUN_TEST(test_eff_spread_negative_diff);
@@ -188,4 +288,8 @@ void register_spread_tests(void) {
     RUN_TEST(test_amihud_null_input);
     RUN_TEST(test_eff_spread_nan_inf);
     RUN_TEST(test_amihud_nan_inf);
+    RUN_TEST(test_eff_spread_rolling_mean);
+    RUN_TEST(test_eff_spread_rolling_stddev);
+    RUN_TEST(test_amihud_rolling_mean);
+    RUN_TEST(test_rolling_invalid_window);
 }

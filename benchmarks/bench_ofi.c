@@ -5,8 +5,8 @@
 
 #include "signal/ofi.h"
 #include "bench_framework.h"
-#include <platform.h>
-#include <simd_detect.h>
+#include "platform.h"
+#include "simd_detect.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
