@@ -180,6 +180,7 @@ set(EXCHANGE_SOURCES
     exchange-c/signal-c/ofi.c
     exchange-c/signal-c/microprice.c
     exchange-c/signal-c/spread.c
+    exchange-c/signal-c/vwap_dev.c
 )
 
 # Create object library

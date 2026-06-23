@@ -14,6 +14,7 @@ add_executable(exchange_tests
     test_ofi.c
     test_microprice.c
     test_spread.c
+    test_vwap_dev.c
 )
 
 # Link with exchange library

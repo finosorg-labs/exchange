@@ -34,7 +34,7 @@ TEST(test_ofi_golden_4tick) {
     double ask_q[] = {400.0, 300.0, 300.0, 200.0};
 
     double level_weights[] = {1.0};
-    double ofi_series[4];
+    double ofi_series[4] = {0.0};  /* Initialize to zero */
 
     /* Compute OFI for each tick */
     for (int t = 1; t < n_ticks; t++) {

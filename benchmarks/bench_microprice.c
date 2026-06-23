@@ -52,6 +52,7 @@ static void bench_microprice_impl(size_t n, const char* name) {
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
     config.name = name;
+    config.data_size = n * sizeof(double) * 5;
     config.min_iterations = 1000;
 
     fc_bench_result_t result;

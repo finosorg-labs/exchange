@@ -35,6 +35,7 @@ add_executable(exchange_benchmarks
     bench_ofi.c
     bench_microprice.c
     bench_spread.c
+    bench_vwap_dev.c
 )
 
 # Link with benchmark framework and exchange library

@@ -182,7 +182,7 @@ TEST(test_eff_spread_rolling_mean) {
     const size_t n = 10;
     double trade_price[10] = {100.5, 100.3, 100.7, 100.2, 100.6, 100.4, 100.8, 100.1, 100.5, 100.3};
     double micro_price[10] = {100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0};
-    double rolling_mean[10];
+    double rolling_mean[10] = {0.0};  /* Initialize to zero */
     size_t window_size = 3;
 
     fc_arena_t* arena = fc_arena_create(n * sizeof(double));
@@ -211,7 +211,7 @@ TEST(test_eff_spread_rolling_stddev) {
     const size_t n = 10;
     double trade_price[10] = {100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5, 100.5};
     double micro_price[10] = {100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0};
-    double rolling_stddev[10];
+    double rolling_stddev[10] = {0.0};  /* Initialize to zero */
     size_t window_size = 3;
 
     fc_arena_t* arena = fc_arena_create(n * sizeof(double));
@@ -233,7 +233,7 @@ TEST(test_amihud_rolling_mean) {
     const size_t n = 10;
     double returns[10] = {0.01, 0.02, 0.015, 0.01, 0.02, 0.015, 0.01, 0.02, 0.015, 0.01};
     double volume[10] = {1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0};
-    double rolling_mean[10];
+    double rolling_mean[10] = {0.0};  /* Initialize to zero */
     size_t window_size = 3;
 
     fc_arena_t* arena = fc_arena_create(n * sizeof(double));
