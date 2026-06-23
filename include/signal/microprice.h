@@ -20,7 +20,7 @@
 #ifndef FC_EX_SIGNAL_MICROPRICE_H
 #define FC_EX_SIGNAL_MICROPRICE_H
 
-#include <error.h>
+#include "error.h"
 #include <platform.h>
 
 #ifdef __cplusplus

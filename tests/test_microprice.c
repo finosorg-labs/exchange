@@ -6,7 +6,7 @@
 #include "signal/microprice.h"
 #include "test_framework.h"
 #include <platform.h>
-#include <error.h>
+#include "error.h"
 #include <mem_aligned.h>
 #include <math.h>
 #include <string.h>
