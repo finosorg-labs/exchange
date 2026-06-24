@@ -18,6 +18,7 @@ add_executable(exchange_tests
     test_kyle_lambda.c
     test_arbitrage.c
     test_feature.c
+    test_normalize.c
 )
 
 # Link with exchange library
