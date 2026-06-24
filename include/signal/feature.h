@@ -26,6 +26,14 @@
 #ifndef FC_EX_SIGNAL_FEATURE_H
 #define FC_EX_SIGNAL_FEATURE_H
 
+/**
+ * @brief Maximum number of order book levels supported
+ *
+ * This limit balances stack usage in SIMD implementations with practical order book depth.
+ * Most exchanges provide 5-10 levels; 32 levels is sufficient for all practical use cases.
+ */
+#define FC_EX_FEATURE_MAX_LEVELS 32
+
 #include "error.h"
 #include <platform.h>
 
@@ -62,9 +70,11 @@ FC_INLINE size_t fc_ex_sig_feature_count(int n_levels) {
  *           - bid_depth_ratio[k], ask_depth_ratio[k]
  *           - bid_price_gap[k] (for k > 0), ask_price_gap[k] (for k > 0)
  *
- * Input Layout:
- * - bid_p: [symbol0_level0, symbol0_level1, ..., symbol1_level0, ...] (n_symbols * n_levels)
- * - Similar for bid_q, ask_p, ask_q
+ * Input Layout (SoA - Structure of Arrays):
+ * - bid_p: [symbol0_level0, symbol1_level0, ..., symbolN_level0,
+ *           symbol0_level1, symbol1_level1, ..., symbolN_level1, ...]
+ * - Index formula: bid_p[level_k * n_symbols + symbol_i]
+ * - Similar layout for bid_q, ask_p, ask_q (all n_symbols * n_levels elements)
  *
  * @param[out] features_out  Feature matrix (n_symbols × n_features), 64-byte aligned recommended
  * @param[in]  bid_p         Bid prices (n_symbols × n_levels), SoA layout
@@ -75,7 +85,8 @@ FC_INLINE size_t fc_ex_sig_feature_count(int n_levels) {
  * @param[in]  n_levels      Number of order book levels per symbol
  *
  * @return FC_OK on success, error code otherwise:
- *         - FC_ERR_INVALID_ARG: any pointer is NULL, n_symbols is 0, or n_levels < 1
+ *         - FC_ERR_INVALID_ARG: any pointer is NULL, n_symbols is 0, n_levels < 1, or n_levels >
+ * FC_EX_FEATURE_MAX_LEVELS
  *
  * @note Features with invalid computations (e.g., divide by zero) are set to NaN
  * @note Thread-safe (no shared state)

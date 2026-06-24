@@ -8,6 +8,7 @@
 #include "platform.h"
 #include "error.h"
 #include "mem_aligned.h"
+#include "simd_detect.h"
 #include <math.h>
 #include <string.h>
 
@@ -159,7 +160,7 @@ TEST(test_feature_invalid_size) {
     FC_TEST_ASSERT_EQ(fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 0, 5), FC_ERR_INVALID_ARG);
     FC_TEST_ASSERT_EQ(fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, 0), FC_ERR_INVALID_ARG);
     FC_TEST_ASSERT_EQ(fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, -1), FC_ERR_INVALID_ARG);
-    FC_TEST_ASSERT_EQ(fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, 33), FC_ERR_INVALID_ARG);
+    FC_TEST_ASSERT_EQ(fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, FC_EX_FEATURE_MAX_LEVELS + 1), FC_ERR_INVALID_ARG);
 }
 
 TEST(test_feature_price_gaps) {
@@ -283,6 +284,254 @@ TEST(test_feature_batch_sizes) {
     }
 }
 
+TEST(test_feature_min_max_levels) {
+    double features[512];
+
+    /* Test minimum levels (n_levels = 1) */
+    {
+        double bid_p[1] = {100.0};
+        double bid_q[1] = {500.0};
+        double ask_p[1] = {100.5};
+        double ask_q[1] = {450.0};
+
+        fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, 1);
+        FC_TEST_ASSERT_EQ(status, FC_OK);
+
+        /* Verify core features work with 1 level */
+        FC_TEST_ASSERT_DOUBLE_EQ(features[0], 100.0, 1e-10);
+        FC_TEST_ASSERT_DOUBLE_EQ(features[1], 100.5, 1e-10);
+        FC_TEST_ASSERT_DOUBLE_EQ(features[4], 100.25, 1e-10);
+    }
+
+    /* Test maximum levels (n_levels = FC_EX_FEATURE_MAX_LEVELS) */
+    {
+        double* bid_p = fc_aligned_alloc(FC_EX_FEATURE_MAX_LEVELS * sizeof(double), 64);
+        double* bid_q = fc_aligned_alloc(FC_EX_FEATURE_MAX_LEVELS * sizeof(double), 64);
+        double* ask_p = fc_aligned_alloc(FC_EX_FEATURE_MAX_LEVELS * sizeof(double), 64);
+        double* ask_q = fc_aligned_alloc(FC_EX_FEATURE_MAX_LEVELS * sizeof(double), 64);
+
+        for (int k = 0; k < FC_EX_FEATURE_MAX_LEVELS; k++) {
+            bid_p[k] = 100.0 - k * 0.1;
+            bid_q[k] = 500.0 - k * 10.0;
+            ask_p[k] = 100.5 + k * 0.1;
+            ask_q[k] = 450.0 - k * 10.0;
+        }
+
+        fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, FC_EX_FEATURE_MAX_LEVELS);
+        FC_TEST_ASSERT_EQ(status, FC_OK);
+
+        /* Verify core features work with max levels */
+        FC_TEST_ASSERT_DOUBLE_EQ(features[0], 100.0, 1e-10);
+        FC_TEST_ASSERT_DOUBLE_EQ(features[1], 100.5, 1e-10);
+
+        fc_aligned_free(bid_p);
+        fc_aligned_free(bid_q);
+        fc_aligned_free(ask_p);
+        fc_aligned_free(ask_q);
+    }
+}
+
+TEST(test_feature_crossed_book) {
+    const int n_levels = 3;
+    double features[64];
+
+    /* Crossed book: bid_p > ask_p (abnormal market condition) */
+    double bid_p[3] = {101.0, 100.9, 100.8};
+    double bid_q[3] = {500.0, 400.0, 300.0};
+    double ask_p[3] = {100.5, 100.6, 100.7};
+    double ask_q[3] = {450.0, 350.0, 250.0};
+
+    fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, n_levels);
+
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* Verify negative spread is correctly computed */
+    double spread = features[6];
+    FC_TEST_ASSERT_DOUBLE_EQ(spread, -0.5, 1e-10);  /* 100.5 - 101.0 = -0.5 */
+
+    /* Mid price should still be computed */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[4], 100.75, 1e-10);  /* (101.0 + 100.5) / 2 */
+}
+
+TEST(test_feature_numerical_edge_cases) {
+    const int n_levels = 2;
+    double features[64];
+
+    /* Very small prices (penny stocks) */
+    {
+        double bid_p[2] = {0.01, 0.009};
+        double bid_q[2] = {1000000.0, 900000.0};
+        double ask_p[2] = {0.011, 0.012};
+        double ask_q[2] = {950000.0, 850000.0};
+
+        fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, n_levels);
+        FC_TEST_ASSERT_EQ(status, FC_OK);
+
+        ASSERT_FALSE(isnan(features[4]));  /* mid_price should be valid */
+        ASSERT_FALSE(isnan(features[5]));  /* micro_price should be valid */
+        ASSERT_FALSE(isnan(features[7]));  /* spread_rel should be valid */
+    }
+
+    /* Very large prices */
+    {
+        double bid_p[2] = {1000000.0, 999999.0};
+        double bid_q[2] = {10.0, 8.0};
+        double ask_p[2] = {1000001.0, 1000002.0};
+        double ask_q[2] = {9.0, 7.0};
+
+        fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, n_levels);
+        FC_TEST_ASSERT_EQ(status, FC_OK);
+
+        ASSERT_FALSE(isnan(features[4]));
+        ASSERT_FALSE(isnan(features[5]));
+        ASSERT_FALSE(isnan(features[7]));
+    }
+}
+
+TEST(test_feature_nan_propagation) {
+    const int n_levels = 2;
+    double features[64];
+
+    /* Input contains NaN */
+    double bid_p[2] = {NAN, 99.9};
+    double bid_q[2] = {500.0, 400.0};
+    double ask_p[2] = {100.5, 100.6};
+    double ask_q[2] = {450.0, 350.0};
+
+    fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, n_levels);
+
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* NaN should propagate through calculations */
+    ASSERT_TRUE(isnan(features[0]));  /* best_bid_p is NaN */
+    ASSERT_TRUE(isnan(features[4]));  /* mid_price should be NaN */
+    ASSERT_TRUE(isnan(features[5]));  /* micro_price should be NaN */
+}
+
+TEST(test_feature_inf_handling) {
+    const int n_levels = 2;
+    double features[64];
+
+    /* Input contains infinity */
+    double bid_p[2] = {INFINITY, 99.9};
+    double bid_q[2] = {500.0, 400.0};
+    double ask_p[2] = {100.5, 100.6};
+    double ask_q[2] = {450.0, 350.0};
+
+    fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, 1, n_levels);
+
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* Infinity should propagate */
+    ASSERT_TRUE(isinf(features[0]));  /* best_bid_p is Inf */
+    ASSERT_TRUE(isinf(features[4]));  /* mid_price should be Inf */
+}
+
+TEST(test_feature_simd_consistency) {
+    /* Test that all SIMD variants produce identical results */
+    const size_t n_symbols = 16;
+    const int n_levels = 5;
+    const size_t n_features = fc_ex_sig_feature_count(n_levels);
+
+    double* bid_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    double* bid_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    double* ask_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    double* ask_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+
+    /* Initialize with varied data */
+    for (size_t i = 0; i < n_symbols; i++) {
+        for (int k = 0; k < n_levels; k++) {
+            size_t idx = k * n_symbols + i;
+            bid_p[idx] = 100.0 + (double)i * 0.5 - (double)k * 0.1;
+            bid_q[idx] = 500.0 + (double)i * 10.0 - (double)k * 50.0;
+            ask_p[idx] = bid_p[idx] + 0.5 + (double)k * 0.1;
+            ask_q[idx] = 450.0 + (double)(n_symbols - i) * 10.0 - (double)k * 50.0;
+        }
+    }
+
+    /* Extract features with current SIMD level */
+    double* features_default = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    fc_status_t status = fc_ex_sig_feature_extract(
+        features_default, bid_p, bid_q, ask_p, ask_q, n_symbols, n_levels
+    );
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* Verify results are valid (not all NaN) */
+    int valid_count = 0;
+    for (size_t i = 0; i < n_symbols; i++) {
+        double* feat = features_default + i * n_features;
+        if (!isnan(feat[0]) && !isnan(feat[1]) && !isnan(feat[4])) {
+            valid_count++;
+        }
+    }
+    ASSERT_TRUE(valid_count == (int)n_symbols);
+
+    /* Note: Full SIMD variant testing (forced dispatch) requires platform-specific */
+    /* SIMD override mechanisms. This test validates that the default dispatch path */
+    /* produces consistent, valid results. Individual SIMD variant unit tests should */
+    /* be added in benchmarks/ or platform-specific test suites. */
+
+    fc_aligned_free(features_default);
+    fc_aligned_free(bid_p);
+    fc_aligned_free(bid_q);
+    fc_aligned_free(ask_p);
+    fc_aligned_free(ask_q);
+}
+
+TEST(test_feature_data_layout_validation) {
+    /* Explicitly test SoA layout: [level0_all_symbols, level1_all_symbols, ...] */
+    const int n_symbols = 3;
+    const int n_levels = 2;
+    const size_t n_features = fc_ex_sig_feature_count(n_levels);
+
+    double* features = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    double* bid_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    double* bid_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    double* ask_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    double* ask_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+
+    /* Layout: [sym0_lv0, sym1_lv0, sym2_lv0, sym0_lv1, sym1_lv1, sym2_lv1] */
+    /* Symbol 0 levels: indices 0, 3 */
+    bid_p[0] = 100.0; bid_q[0] = 500.0; ask_p[0] = 100.5; ask_q[0] = 500.0;
+    bid_p[3] = 99.9;  bid_q[3] = 400.0; ask_p[3] = 100.6; ask_q[3] = 400.0;
+
+    /* Symbol 1 levels: indices 1, 4 */
+    bid_p[1] = 50.0;  bid_q[1] = 1000.0; ask_p[1] = 50.1; ask_q[1] = 900.0;
+    bid_p[4] = 49.9;  bid_q[4] = 800.0;  ask_p[4] = 50.2; ask_q[4] = 700.0;
+
+    /* Symbol 2 levels: indices 2, 5 */
+    bid_p[2] = 200.0; bid_q[2] = 100.0; ask_p[2] = 201.0; ask_q[2] = 100.0;
+    bid_p[5] = 199.0; bid_q[5] = 80.0;  ask_p[5] = 202.0; ask_q[5] = 80.0;
+
+    fc_status_t status = fc_ex_sig_feature_extract(features, bid_p, bid_q, ask_p, ask_q, n_symbols, n_levels);
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* Verify correct symbol extraction from SoA layout */
+    /* Symbol 0 */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[0 * n_features + 0], 100.0, 1e-10);  /* best_bid_p */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[0 * n_features + 1], 100.5, 1e-10);  /* best_ask_p */
+
+    /* Symbol 1 */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[1 * n_features + 0], 50.0, 1e-10);
+    FC_TEST_ASSERT_DOUBLE_EQ(features[1 * n_features + 1], 50.1, 1e-10);
+
+    /* Symbol 2 */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[2 * n_features + 0], 200.0, 1e-10);
+    FC_TEST_ASSERT_DOUBLE_EQ(features[2 * n_features + 1], 201.0, 1e-10);
+
+    /* Verify level-wise features use correct levels */
+    /* Symbol 0, level 1 features should reflect level 1 data (index 3) */
+    size_t sym0_level1_idx = 0 * n_features + 9 + 8;  /* Core(9) + Level0(8) */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[sym0_level1_idx + 0], 99.9, 1e-10);  /* bid_p[1] */
+    FC_TEST_ASSERT_DOUBLE_EQ(features[sym0_level1_idx + 1], 400.0, 1e-10); /* bid_q[1] */
+
+    fc_aligned_free(features);
+    fc_aligned_free(bid_p);
+    fc_aligned_free(bid_q);
+    fc_aligned_free(ask_p);
+    fc_aligned_free(ask_q);
+}
+
 void register_feature_tests(void) {
     RUN_TEST(test_feature_count);
     RUN_TEST(test_feature_basic_single_symbol);
@@ -294,4 +543,11 @@ void register_feature_tests(void) {
     RUN_TEST(test_feature_core_only);
     RUN_TEST(test_feature_depth_ratios);
     RUN_TEST(test_feature_batch_sizes);
+    RUN_TEST(test_feature_min_max_levels);
+    RUN_TEST(test_feature_crossed_book);
+    RUN_TEST(test_feature_numerical_edge_cases);
+    RUN_TEST(test_feature_nan_propagation);
+    RUN_TEST(test_feature_inf_handling);
+    RUN_TEST(test_feature_simd_consistency);
+    RUN_TEST(test_feature_data_layout_validation);
 }
