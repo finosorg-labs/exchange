@@ -20,6 +20,7 @@ add_executable(exchange_tests
     test_feature.c
     test_normalize.c
     test_postprocess.c
+    test_alpha.c
 )
 
 # Link with exchange library

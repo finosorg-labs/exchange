@@ -22,6 +22,7 @@ extern void register_arbitrage_tests(void);
 extern void register_feature_tests(void);
 extern void register_normalize_tests(void);
 extern void register_postprocess_tests(void);
+extern void register_alpha_tests(void);
 
 /* Entry point for exchange tests */
 void register_exchange_tests(void) {
@@ -39,4 +40,5 @@ void register_exchange_tests(void) {
     register_feature_tests();
     register_normalize_tests();
     register_postprocess_tests();
+    register_alpha_tests();
 }

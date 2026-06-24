@@ -214,6 +214,7 @@ set(EXCHANGE_SOURCES
     exchange-c/signal-c/feature.c
     exchange-c/signal-c/normalize.c
     exchange-c/signal-c/postprocess.c
+    exchange-c/signal-c/alpha.c
 )
 
 # Create object library
