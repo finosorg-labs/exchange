@@ -23,6 +23,7 @@ target_link_libraries(exchange_tests
     PRIVATE
         finkit_exchange_static_base
         finkit::stats
+        finkit::optim
       finkit::sort
         finkit::ds
         finkit::math

@@ -18,6 +18,7 @@ target_link_libraries(bench_framework
     PUBLIC
         finkit_exchange_static_base
         finkit::stats
+        finkit::optim
       finkit::sort
         finkit::ds
         finkit::math
@@ -45,6 +46,7 @@ target_link_libraries(exchange_benchmarks
         bench_framework
         finkit_exchange_static_base
         finkit::stats
+        finkit::optim
       finkit::sort
         finkit::ds
         finkit::math

@@ -143,6 +143,34 @@ if(NOT TARGET finkit::stats)
     add_library(finkit::stats ALIAS finkit_stats_static)
 endif()
 
+# Use prebuilt optim library
+if(NOT TARGET finkit::optim)
+    # Detect optim
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+            set(OPTIM_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/build/darwin_arm64")
+        else()
+            set(OPTIM_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/build/darwin_x86_64")
+        endif()
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(OPTIM_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/build/linux_amd64")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(OPTIM_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/build/windows_amd64")
+    else()
+        message(FATAL_ERROR "Unsupported optim: ${CMAKE_SYSTEM_NAME}")
+    endif()
+
+    # Import prebuilt optim library
+    add_library(finkit_optim_static STATIC IMPORTED)
+    set_target_properties(finkit_optim_static PROPERTIES
+        IMPORTED_LOCATION "${OPTIM_BUILD_DIR}/libfinkit_optim_static.a"
+    )
+    target_include_directories(finkit_optim_static INTERFACE
+        "${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/include"
+    )
+    add_library(finkit::optim ALIAS finkit_optim_static)
+endif()
+
 # Use prebuilt math library
 if(NOT TARGET finkit::math)
     # Detect math
@@ -194,6 +222,7 @@ target_include_directories(finkit_exchange
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/modules/math/include>
         $<INSTALL_INTERFACE:include>
 )
@@ -227,6 +256,7 @@ endif()
 # Merge static libraries into a single library
 set(MERGED_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}/libfinkit_exchange_static.a)
 set(STATS_LIB_PATH "${STATS_BUILD_DIR}/libfinkit_stats_static.a")
+set(OPTIM_LIB_PATH "${OPTIM_BUILD_DIR}/libfinkit_optim_static.a")
 set(SORT_LIB_PATH "${SORT_BUILD_DIR}/libfinkit_sort_static.a")
 set(DS_LIB_PATH "${DS_BUILD_DIR}/libfinkit_ds_static.a")
 set(MATH_LIB_PATH "${MATH_BUILD_DIR}/libfinkit_math_static.a")
@@ -240,11 +270,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
      COMMAND lib.exe /OUT:${MERGED_LIB_PATH}
             $<TARGET_FILE:finkit_exchange_static_base>
             ${STATS_LIB_PATH}
+            ${OPTIM_LIB_PATH}
         ${SORT_LIB_PATH}
             ${DS_LIB_PATH}
             ${MATH_LIB_PATH}
             ${PLATFORM_LIB_PATH}
-        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH}
+        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${OPTIM_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH}
      COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
         VERBATIM
   )
@@ -256,12 +287,13 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         COMMAND libtool -static -o ${MERGED_LIB_PATH}
             $<TARGET_FILE:finkit_exchange_static_base>
             ${STATS_LIB_PATH}
+            ${OPTIM_LIB_PATH}
           ${SORT_LIB_PATH}
           ${DS_LIB_PATH}
             ${MATH_LIB_PATH}
             ${PLATFORM_LIB_PATH}
         2>&1 | grep -v "warning duplicate member name" || true
-        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH}
+        DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${OPTIM_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH}
         COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
         VERBATIM
     )
@@ -272,6 +304,7 @@ else()
 "CREATE ${MERGED_LIB_PATH}
 ADDLIB $<TARGET_FILE:finkit_exchange_static_base>
 ADDLIB ${STATS_LIB_PATH}
+ADDLIB ${OPTIM_LIB_PATH}
 ADDLIB ${SORT_LIB_PATH}
 ADDLIB ${DS_LIB_PATH}
 ADDLIB ${MATH_LIB_PATH}
@@ -284,7 +317,7 @@ END
         OUTPUT ${MERGED_LIB_PATH}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build/${EXCHANGE_BUILD_DIR}
         COMMAND ${CMAKE_AR} -M < ${MRI_SCRIPT}
-     DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH} ${MRI_SCRIPT}
+     DEPENDS finkit_exchange_static_base ${STATS_LIB_PATH} ${OPTIM_LIB_PATH} ${SORT_LIB_PATH} ${DS_LIB_PATH} ${MATH_LIB_PATH} ${PLATFORM_LIB_PATH} ${MRI_SCRIPT}
         COMMENT "Merging static libraries into ${MERGED_LIB_PATH}"
         VERBATIM
     )
