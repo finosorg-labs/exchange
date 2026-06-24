@@ -16,6 +16,7 @@ add_executable(exchange_tests
     test_spread.c
     test_vwap_dev.c
     test_kyle_lambda.c
+    test_arbitrage.c
 )
 
 # Link with exchange library

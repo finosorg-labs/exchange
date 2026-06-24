@@ -210,6 +210,7 @@ set(EXCHANGE_SOURCES
     exchange-c/signal-c/spread.c
     exchange-c/signal-c/vwap_dev.c
     exchange-c/signal-c/kyle_lambda.c
+    exchange-c/signal-c/arbitrage.c
 )
 
 # Create object library
