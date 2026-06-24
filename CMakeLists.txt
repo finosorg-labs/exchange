@@ -213,6 +213,7 @@ set(EXCHANGE_SOURCES
     exchange-c/signal-c/arbitrage.c
     exchange-c/signal-c/feature.c
     exchange-c/signal-c/normalize.c
+    exchange-c/signal-c/postprocess.c
 )
 
 # Create object library

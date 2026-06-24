@@ -23,6 +23,7 @@ extern void bench_kyle_lambda_run(void);
 extern void bench_arbitrage_run(void);
 extern void bench_feature_run(void);
 extern void bench_normalize_run(void);
+extern void bench_postprocess_run(void);
 
 /* Entry point for exchange benchmarks */
 void bench_exchange_run(void) {
@@ -45,6 +46,7 @@ void bench_exchange_run(void) {
     bench_arbitrage_run();
     bench_feature_run();
     bench_normalize_run();
+    bench_postprocess_run();
 
     printf("\n");
     printf("============================================================\n");

@@ -19,6 +19,7 @@ add_executable(exchange_tests
     test_arbitrage.c
     test_feature.c
     test_normalize.c
+    test_postprocess.c
 )
 
 # Link with exchange library
