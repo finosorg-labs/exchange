@@ -42,6 +42,7 @@ typedef struct {
 typedef struct {
     double* weights_out;
     const double* signals_hist;
+    double* work_buffer;
     size_t window_size;
     int n_signals;
 } bench_invvol_data_t;
@@ -71,7 +72,7 @@ static void bench_compute_agreement_fn(void* user_data) {
 
 static void bench_inverse_vol_weights_fn(void* user_data) {
     bench_invvol_data_t* data = (bench_invvol_data_t*)user_data;
-    fc_ex_sig_inverse_vol_weights(data->weights_out, data->signals_hist, data->window_size, data->n_signals);
+    fc_ex_sig_inverse_vol_weights(data->weights_out, data->signals_hist, data->work_buffer, data->window_size, data->n_signals);
 }
 
 static void bench_alpha_aggregate_impl(size_t n_symbols, int n_signals, const char* name) {
@@ -104,7 +105,8 @@ static void bench_alpha_aggregate_impl(size_t n_symbols, int n_signals, const ch
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.3
+        .min_confidence = 0.3,
+        .strength_scale = 1.0
     };
 
     bench_alpha_data_t data = {
@@ -267,8 +269,9 @@ static void bench_inverse_vol_weights_impl(size_t window_size, int n_signals, co
 
     double* signals_hist = aligned_alloc(64, ALIGN_SIZE(hist_size * sizeof(double)));
     double* weights_out = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
+    double* work_buffer = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
 
-    if (!signals_hist || !weights_out) {
+    if (!signals_hist || !weights_out || !work_buffer) {
         fprintf(stderr, "Memory allocation failed\n");
         return;
     }
@@ -285,6 +288,7 @@ static void bench_inverse_vol_weights_impl(size_t window_size, int n_signals, co
     bench_invvol_data_t data = {
         .weights_out = weights_out,
         .signals_hist = signals_hist,
+        .work_buffer = work_buffer,
         .window_size = window_size,
         .n_signals = n_signals
     };
@@ -301,6 +305,7 @@ static void bench_inverse_vol_weights_impl(size_t window_size, int n_signals, co
 
     free(signals_hist);
     free(weights_out);
+    free(work_buffer);
 }
 
 void bench_alpha_run(void) {

@@ -31,6 +31,12 @@ typedef struct {
     int normalize_weights;  /**< If true, normalize weights to sum to 1.0 */
     int per_symbol_weights; /**< If true, weights are (n_symbols × n_signals), else (n_signals) */
     double min_confidence;  /**< Minimum confidence threshold (0.0-1.0), signals below are zeroed */
+    double strength_scale;  /**< Strength scaling factor for normalization (default 1.0).
+                                 Used to adjust for different signal magnitudes:
+                                 - 1.0: signals pre-normalized to [-1, 1]
+                                 - 100.0: large signals like OFI integrals
+                                 - 3.0: z-score signals (typically [-3, 3])
+                                 Confidence uses tanh(avg_strength / strength_scale) */
 } fc_ex_alpha_cfg_t;
 
 /**
@@ -61,6 +67,9 @@ typedef struct {
  *
  * @return FC_OK on success, error code otherwise
  *
+ * @note cfg.strength_scale adjusts confidence for different signal magnitudes
+ * @note Confidence strength_factor = tanh(avg_signal_strength / cfg.strength_scale)
+ * @note Default strength_scale=1.0 assumes signals in [-1, 1] range
  * @note All arrays must be 64-byte aligned for optimal SIMD performance
  * @note signals layout: signals[symbol_idx * n_signals + signal_idx]
  * @note If cfg.per_symbol_weights = false: weights[signal_idx]
@@ -160,6 +169,7 @@ FC_API fc_status_t fc_ex_sig_compute_agreement(
  *
  * @param[out] weights_out    Inverse volatility weights (n_signals)
  * @param[in]  signals_hist   Historical signals (window_size × n_signals)
+ * @param[in]  work_buffer    Work buffer for temporary data (n_signals doubles)
  * @param[in]  window_size    Length of historical window
  * @param[in]  n_signals      Number of signals
  *
@@ -169,12 +179,14 @@ FC_API fc_status_t fc_ex_sig_compute_agreement(
  * @note Computes std deviation for each signal column across time window
  * @note If std is zero or near-zero, signal receives minimum weight
  * @note Output weights are normalized to sum to 1.0
+ * @note work_buffer must have space for at least n_signals doubles
  * @note Time complexity: O(window_size * n_signals)
  * @note Thread-safe: no shared mutable state
  */
 FC_API fc_status_t fc_ex_sig_inverse_vol_weights(
     double* weights_out,
     const double* signals_hist,
+    double* work_buffer,
     size_t window_size,
     int n_signals
 );

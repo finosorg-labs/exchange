@@ -39,7 +39,8 @@ TEST(test_alpha_basic_aggregation) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 0,  /* Already normalized */
         .per_symbol_weights = 0, /* Uniform weights */
-        .min_confidence = 0.0
+        .min_confidence = 0.0,
+        .strength_scale = 1.0    /* Default scale for normalized signals */
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -83,7 +84,8 @@ TEST(test_alpha_weight_normalization) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 1,  /* Enable normalization */
         .per_symbol_weights = 0,
-        .min_confidence = 0.0
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -122,7 +124,8 @@ TEST(test_alpha_per_symbol_weights) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 0,
         .per_symbol_weights = 1,  /* Per-symbol weights */
-        .min_confidence = 0.0
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -156,7 +159,8 @@ TEST(test_alpha_min_confidence_threshold) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.7  /* High threshold */
+        .min_confidence = 0.7,  /* High threshold */
+        .strength_scale = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -193,7 +197,8 @@ TEST(test_alpha_nan_inf_handling) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -229,7 +234,8 @@ TEST(test_alpha_zero_weights) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 1,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -316,8 +322,9 @@ TEST(test_inverse_vol_weights) {
     };
 
     double weights_out[3];
+    double work_buffer[3];  /* Work buffer for n_signals doubles */
 
-    fc_status_t status = fc_ex_sig_inverse_vol_weights(weights_out, signals_hist, window_size, n_signals);
+    fc_status_t status = fc_ex_sig_inverse_vol_weights(weights_out, signals_hist, work_buffer, window_size, n_signals);
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
     /* Signal 0 has lowest volatility, should get highest weight */
@@ -337,7 +344,12 @@ TEST(test_alpha_input_validation) {
     double signals[] = {1.0};
     double weights[] = {1.0};
 
-    fc_ex_alpha_cfg_t cfg = {0};
+    fc_ex_alpha_cfg_t cfg = {
+        .normalize_weights = 0,
+        .per_symbol_weights = 0,
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
+    };
 
     /* NULL pointers */
     FC_TEST_ASSERT_EQ(
@@ -382,6 +394,79 @@ TEST(test_alpha_input_validation) {
         fc_ex_sig_alpha_aggregate(alpha_out, confidence_out, signals, weights, &cfg, 1, 1),
         FC_ERR_INVALID_ARG
     );
+
+    /* Invalid strength_scale (must be > 0) */
+    cfg.min_confidence = 0.5;
+    cfg.strength_scale = 0.0;
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_alpha_aggregate(alpha_out, confidence_out, signals, weights, &cfg, 1, 1),
+        FC_ERR_INVALID_ARG
+    );
+    cfg.strength_scale = -1.0;
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_alpha_aggregate(alpha_out, confidence_out, signals, weights, &cfg, 1, 1),
+        FC_ERR_INVALID_ARG
+    );
+}
+
+/* Test strength_scale impact on confidence */
+TEST(test_alpha_strength_scale) {
+    const size_t n_symbols = 2;
+    const int n_signals = 3;
+
+    /* Symbol 0: weak signals (all 0.1), all positive - high agreement, low strength */
+    /* Symbol 1: strong signals (all 10.0), all positive - high agreement, high strength */
+    double signals[] = {
+        0.1, 0.1, 0.1,   /* Symbol 0 */
+        10.0, 10.0, 10.0 /* Symbol 1 */
+    };
+    double weights[] = {0.33, 0.33, 0.34};
+
+    double alpha_out1[2], confidence_out1[2];
+    double alpha_out2[2], confidence_out2[2];
+
+    /* Test with scale=1.0 (assumes signals in [-1,1]) */
+    fc_ex_alpha_cfg_t cfg1 = {
+        .normalize_weights = 0,
+        .per_symbol_weights = 0,
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
+    };
+
+    fc_status_t status = fc_ex_sig_alpha_aggregate(
+        alpha_out1, confidence_out1, signals, weights, &cfg1, n_symbols, n_signals
+    );
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* Test with scale=10.0 (assumes larger signals) */
+    fc_ex_alpha_cfg_t cfg2 = {
+        .normalize_weights = 0,
+        .per_symbol_weights = 0,
+        .min_confidence = 0.0,
+        .strength_scale = 10.0
+    };
+
+    status = fc_ex_sig_alpha_aggregate(
+        alpha_out2, confidence_out2, signals, weights, &cfg2, n_symbols, n_signals
+    );
+    FC_TEST_ASSERT_EQ(status, FC_OK);
+
+    /* With scale=1.0:
+     * - Symbol 0 (avg_strength=0.1): tanh(0.1/1.0)=0.099 -> low confidence
+     * - Symbol 1 (avg_strength=10.0): tanh(10.0/1.0)=0.999 -> very high confidence
+     */
+    FC_TEST_ASSERT(confidence_out1[0] < 0.2);  /* Weak signal, low confidence */
+    FC_TEST_ASSERT(confidence_out1[1] > 0.9);  /* Strong signal, high confidence */
+
+    /* With scale=10.0:
+     * - Symbol 0 (avg_strength=0.1): tanh(0.1/10.0)=0.01 -> very low confidence
+     * - Symbol 1 (avg_strength=10.0): tanh(10.0/10.0)=tanh(1.0)=0.76 -> moderate-high confidence
+     */
+    FC_TEST_ASSERT(confidence_out2[0] < 0.05);  /* Weak signal with larger scale */
+    FC_TEST_ASSERT(confidence_out2[1] > 0.7 && confidence_out2[1] < 0.8);  /* Strong signal normalized */
+
+    /* Confidence for symbol 1 should be lower with larger scale (less saturated) */
+    FC_TEST_ASSERT(confidence_out2[1] < confidence_out1[1]);
 }
 
 /* Test large batch */
@@ -415,7 +500,8 @@ TEST(test_alpha_large_batch) {
     fc_ex_alpha_cfg_t cfg = {
         .normalize_weights = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0
+        .min_confidence = 0.0,
+        .strength_scale = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -449,5 +535,6 @@ void register_alpha_tests(void) {
     RUN_TEST(test_compute_agreement);
     RUN_TEST(test_inverse_vol_weights);
     RUN_TEST(test_alpha_input_validation);
+    RUN_TEST(test_alpha_strength_scale);
     RUN_TEST(test_alpha_large_batch);
 }
