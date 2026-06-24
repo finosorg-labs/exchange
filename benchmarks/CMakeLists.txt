@@ -39,6 +39,7 @@ add_executable(exchange_benchmarks
     bench_vwap_dev.c
     bench_kyle_lambda.c
     bench_arbitrage.c
+    bench_feature.c
 )
 
 # Link with benchmark framework and exchange library

@@ -9,6 +9,7 @@
 #ifndef FC_EXCHANGE_H
 #define FC_EXCHANGE_H
 
+#include "signal/feature.h"
 #include "signal/kyle_lambda.h"
 #include "signal/microprice.h"
 #include "signal/ofi.h"

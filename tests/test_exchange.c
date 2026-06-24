@@ -19,6 +19,7 @@ extern void register_spread_tests(void);
 extern void register_vwap_dev_tests(void);
 extern void register_kyle_lambda_tests(void);
 extern void register_arbitrage_tests(void);
+extern void register_feature_tests(void);
 
 /* Entry point for exchange tests */
 void register_exchange_tests(void) {
@@ -33,4 +34,5 @@ void register_exchange_tests(void) {
     register_vwap_dev_tests();
     register_kyle_lambda_tests();
     register_arbitrage_tests();
+    register_feature_tests();
 }
