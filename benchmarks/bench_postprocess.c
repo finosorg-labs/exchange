@@ -57,8 +57,7 @@ static void bench_postprocess_impl(size_t n, const char* name) {
         .threshold = 0.1,
         .ema_alpha = 0.3,
         .clip_lo = -2.0,
-        .clip_hi = 2.0,
-        .enable_reversal = 0
+        .clip_hi = 2.0
     };
 
     bench_postprocess_data_t data = {
@@ -180,8 +179,7 @@ void bench_postprocess_run(void) {
         .threshold = 0.1,
         .ema_alpha = 1.0,     /* No EMA */
         .clip_lo = -INFINITY,
-        .clip_hi = INFINITY,
-        .enable_reversal = 0
+        .clip_hi = INFINITY
     };
     bench_postprocess_data_t data_threshold = {sig_out, ema_state, sig_in, &cfg_threshold, n};
 
@@ -203,8 +201,7 @@ void bench_postprocess_run(void) {
         .threshold = 0.0,
         .ema_alpha = 0.3,
         .clip_lo = -INFINITY,
-        .clip_hi = INFINITY,
-        .enable_reversal = 0
+        .clip_hi = INFINITY
     };
     bench_postprocess_data_t data_ema = {sig_out, ema_state, sig_in, &cfg_ema, n};
 
@@ -226,8 +223,7 @@ void bench_postprocess_run(void) {
         .threshold = 0.0,
         .ema_alpha = 1.0,
         .clip_lo = -2.0,
-        .clip_hi = 2.0,
-        .enable_reversal = 0
+        .clip_hi = 2.0
     };
     bench_postprocess_data_t data_clip = {sig_out, ema_state, sig_in, &cfg_clip, n};
 

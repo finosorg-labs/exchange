@@ -25,11 +25,10 @@ FC_BEGIN_DECLS
  * Controls signal filtering and smoothing behavior.
  */
 typedef struct {
-    double threshold;    /**< Threshold filter: |sig| < threshold → sig = 0 */
-    double ema_alpha;    /**< EMA smoothing coefficient (0 < alpha ≤ 1) */
-    double clip_lo;      /**< Lower clip bound */
-    double clip_hi;      /**< Upper clip bound */
-    int enable_reversal; /**< Enable reversal detection (1=on, 0=off) */
+    double threshold; /**< Threshold filter: |sig| < threshold → sig = 0 */
+    double ema_alpha; /**< EMA smoothing coefficient (0 < alpha ≤ 1) */
+    double clip_lo;   /**< Lower clip bound */
+    double clip_hi;   /**< Upper clip bound */
 } fc_ex_sig_postproc_cfg_t;
 
 /**
@@ -37,15 +36,15 @@ typedef struct {
  *
  * Applies a series of transformations to raw signals:
  * 1. Threshold filtering: signals with |value| < threshold are zeroed
- * 2. Reversal detection (if enabled): marks sign changes
- * 3. EMA smoothing: sig_out = alpha * sig + (1-alpha) * ema_state
- * 4. Clipping: sig_out = clamp(sig_out, clip_lo, clip_hi)
+ * 2. EMA smoothing: sig_out = alpha * sig + (1-alpha) * ema_state
+ * 3. Clipping: sig_out = clamp(sig_out, clip_lo, clip_hi)
  *
  * Processing order:
  * - Threshold filter applied first (on input)
  * - EMA smoothing applied second
  * - Clipping applied last (on output)
- * - Reversal detection operates on filtered signals
+ *
+ * For reversal detection, use fc_ex_sig_detect_reversal() separately.
  *
  * @param[out] sig_out     Post-processed signals (n)
  * @param[in,out] ema_state EMA state for each signal (n), updated in-place
@@ -59,6 +58,7 @@ typedef struct {
  * @note EMA state must be initialized before first call (typically to 0.0)
  * @note For disable EMA: set ema_alpha = 1.0
  * @note For no clipping: set clip_lo = -INFINITY, clip_hi = +INFINITY
+ * @note NaN/Inf propagation: special values in input will propagate through EMA
  * @note Uses runtime SIMD dispatch (AVX-512 > AVX2 > SSE4.2 > Scalar)
  * @note Time complexity: O(n) with SIMD parallelism
  * @note Thread-safe: no shared mutable state
@@ -98,6 +98,56 @@ FC_API fc_status_t fc_ex_sig_detect_reversal(
     const double* sig_cur,
     size_t n
 );
+
+/**
+ * @brief Sanitize signals by replacing NaN/Inf with specified value
+ *
+ * Scans input array and replaces any NaN or Inf values with a replacement value
+ * (typically 0.0). Useful for cleaning signals before post-processing.
+ *
+ * @param[out] sig_out      Sanitized signals (n), can be same as sig_in for in-place
+ * @param[in]  sig_in       Input signals (n)
+ * @param[in]  n            Number of signals
+ * @param[in]  replacement  Value to replace NaN/Inf with (typically 0.0)
+ *
+ * @return FC_OK on success, error code otherwise
+ *
+ * @note Can be used in-place by passing same pointer for sig_out and sig_in
+ * @note Uses runtime SIMD dispatch for performance
+ * @note Time complexity: O(n) with SIMD parallelism
+ * @note Thread-safe: no shared mutable state
+ */
+FC_API fc_status_t fc_ex_sig_sanitize_special_values(
+    double* sig_out,
+    const double* sig_in,
+    size_t n,
+    double replacement
+);
+
+/**
+ * @brief Initialize EMA state array
+ *
+ * Provides common initialization strategies for EMA state before first call
+ * to fc_ex_sig_postprocess().
+ *
+ * Strategies:
+ * - Zero initialization: state = 0 (causes first signal to be scaled by alpha)
+ * - Signal initialization: state = first signal value (no scaling on first call)
+ * - Custom initialization: state = custom value
+ *
+ * @param[out] ema_state    EMA state array to initialize (n)
+ * @param[in]  init_values  Initialization values (n), or NULL for zero init
+ * @param[in]  n            Number of signals
+ *
+ * @return FC_OK on success, error code otherwise
+ *
+ * @note If init_values is NULL, initializes all states to 0.0
+ * @note If init_values is provided, copies values to ema_state
+ * @note For "no scaling" behavior, initialize with first signal value
+ * @note Time complexity: O(n)
+ * @note Thread-safe: no shared mutable state
+ */
+FC_API fc_status_t fc_ex_sig_init_ema_state(double* ema_state, const double* init_values, size_t n);
 
 FC_END_DECLS
 

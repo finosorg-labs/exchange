@@ -56,7 +56,7 @@ TEST(test_kyle_lambda_multiple_symbols) {
         5.0, 5.0, 5.0, 5.0    /* Symbol 2: constant volume */
     };
 
-    double lambda[3];
+    double lambda[3] = {0.0};
     fc_status_t status = fc_ex_sig_kyle_lambda_batch(lambda, dprice, volume, n_symbols, window);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
@@ -390,7 +390,7 @@ TEST(test_kyle_lambda_ols_vs_covariance) {
         }
     }
 
-    double lambda_cov[3], lambda_ols[3];
+    double lambda_cov[3] = {0.0}, lambda_ols[3] = {0.0};
 
     /* Compute with both methods */
     fc_status_t status1 = fc_ex_sig_kyle_lambda_batch(
@@ -433,8 +433,8 @@ TEST(test_kyle_lambda_ols_residuals) {
         2.0, 4.0, 6.0, 8.0, 10.0           /* Symbol 1 */
     };
 
-    double lambda[2], r_squared[2];
-    double residuals[10];
+    double lambda[2] = {0.0}, r_squared[2] = {0.0};
+    double residuals[10] = {0.0};
 
     fc_status_t status = fc_ex_sig_kyle_lambda_ols(
         lambda, r_squared, NULL, residuals,
@@ -483,7 +483,7 @@ TEST(test_kyle_lambda_ext_validity_flags) {
         3.0, 3.0, 3.0, 3.0    /* Symbol 2: constant (zero variance) */
     };
 
-    double lambda[3];
+    double lambda[3] = {0.0};
     bool valid[3];
 
     fc_status_t status = fc_ex_sig_kyle_lambda_batch_ext(
@@ -590,7 +590,7 @@ TEST(test_kyle_lambda_ext_backward_compatibility) {
         }
     }
 
-    double lambda_orig[3], lambda_ext[3];
+    double lambda_orig[3] = {0.0}, lambda_ext[3] = {0.0};
     bool valid[3];
 
     /* Call original API */
@@ -629,7 +629,7 @@ TEST(test_kyle_lambda_ols_ext_validity_flags) {
         2.0, 4.0, 6.0, 8.0, 10.0   /* Symbol 1 */
     };
 
-    double lambda[2], r_squared[2];
+    double lambda[2] = {0.0}, r_squared[2] = {0.0};
     bool valid[2];
 
     fc_status_t status = fc_ex_sig_kyle_lambda_ols_ext(
