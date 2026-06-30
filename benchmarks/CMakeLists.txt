@@ -33,6 +33,7 @@ add_executable(exchange_benchmarks
     bench_ticker_merge.c
     bench_orderbook.c
     bench_market_indicators.c
+    bench_market_maker_quotes.c
     bench_ofi.c
     bench_microprice.c
     bench_spread.c

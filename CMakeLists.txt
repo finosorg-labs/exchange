@@ -205,6 +205,7 @@ set(EXCHANGE_SOURCES
     exchange-c/ticker_merge.c
     exchange-c/orderbook.c
     exchange-c/market_indicators.c
+    exchange-c/market_maker_quotes.c
     exchange-c/signal-c/ofi.c
     exchange-c/signal-c/microprice.c
     exchange-c/signal-c/spread.c
