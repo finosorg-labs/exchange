@@ -258,9 +258,9 @@ clean:
 	@go clean -cache
 
 sync:
-	@echo "==> Syncing all submodules (init + remote update + restore tracked files)"
+	@echo "==> Syncing submodules (one level only)"
 	@echo "==> Step 1: Sync submodule URLs from .gitmodules to .git/config"
-	@git submodule sync --recursive
+	@git submodule sync
 	@echo "==> Step 2: Ensure submodules are registered in git index"
 	@git config -f .gitmodules --get-regexp '^submodule\..*\.path$$' | while read key path; do \
 		if [ ! -d "$$path/.git" ] && [ ! -f "$$path/.git" ]; then \
@@ -271,9 +271,9 @@ sync:
 		fi; \
 	done
 	@echo "==> Step 3: Reset and clean submodule working trees"
-	@git submodule foreach --recursive 'git reset --hard && git clean -fd' || true
+	@git submodule foreach 'git reset --hard && git clean -fd' || true
 	@echo "==> Step 4: Update all submodules to latest"
-	@git submodule update --init --remote --merge --recursive --force
+	@git submodule update --init --remote --merge --force
 	@echo "==> Submodules synced successfully"
 
 help:

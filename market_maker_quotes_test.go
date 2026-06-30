@@ -175,6 +175,20 @@ func TestMarketMakerQuotesInvalidArgs(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for mismatched slice lengths")
 	}
+
+	_, _, err = MarketMakerQuotes(
+		midPrices, inventories, volatilities, []float64{0.0}, 0.1, 1.0,
+	)
+	if err == nil {
+		t.Error("Expected error for zero arrival rate")
+	}
+
+	_, _, err = MarketMakerQuotes(
+		midPrices, inventories, volatilities, []float64{-5.0}, 0.1, 1.0,
+	)
+	if err == nil {
+		t.Error("Expected error for negative arrival rate")
+	}
 }
 
 func TestMarketMakerQuotesEmpty(t *testing.T) {
