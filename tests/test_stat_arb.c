@@ -360,6 +360,85 @@ TEST(test_zscore_window_full) {
     fc_ex_strat_zscore_state_free(&state);
 }
 
+TEST(test_coint_spread_z_batch_basic) {
+    const size_t n_pairs = 2;
+    const size_t window_size = 10;
+
+    double spread_history[20] = {0};
+    double z_out[20] = {0};
+
+    // Pair 0: constant spread (should have z=0)
+    for (size_t j = 0; j < window_size; j++) {
+        spread_history[0 * window_size + j] = 1.0;
+    }
+
+    // Pair 1: linearly increasing spread
+    for (size_t j = 0; j < window_size; j++) {
+        spread_history[1 * window_size + j] = (double)j;
+    }
+
+    fc_status_t status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, n_pairs, window_size);
+    ASSERT_EQ(status, FC_OK);
+
+    // Pair 0: constant values should have z ≈ 0
+    for (size_t j = 0; j < window_size; j++) {
+        ASSERT_TRUE(fabs(z_out[0 * window_size + j]) < 0.1);
+    }
+
+    // Pair 1: values should vary
+    ASSERT_TRUE(!isnan(z_out[1 * window_size + 0]));
+}
+
+TEST(test_coint_spread_z_batch_null_args) {
+    double spread_history[10] = {0};
+    double z_out[10] = {0};
+
+    fc_status_t status = fc_ex_strat_coint_spread_z_batch(NULL, spread_history, 1, 10);
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+
+    status = fc_ex_strat_coint_spread_z_batch(z_out, NULL, 1, 10);
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_coint_spread_z_batch_invalid_dimensions) {
+    double spread_history[10] = {0};
+    double z_out[10] = {0};
+
+    fc_status_t status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, 0, 10);
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+
+    status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, 1, 0);
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+
+    status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, 1, 1);
+    ASSERT_EQ(status, FC_ERR_INVALID_ARG);
+}
+
+TEST(test_coint_spread_z_batch_large) {
+    const size_t n_pairs = 100;
+    const size_t window_size = 50;
+    const size_t total_size = n_pairs * window_size;
+
+    double* spread_history = (double*)malloc(total_size * sizeof(double));
+    double* z_out = (double*)malloc(total_size * sizeof(double));
+
+    srand(42);
+    for (size_t i = 0; i < total_size; i++) {
+        spread_history[i] = (rand() % 1000) / 100.0;
+    }
+
+    fc_status_t status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, n_pairs, window_size);
+    ASSERT_EQ(status, FC_OK);
+
+    // Check that z-scores are computed
+    for (size_t i = 0; i < total_size; i++) {
+        ASSERT_TRUE(!isnan(z_out[i]));
+    }
+
+    free(spread_history);
+    free(z_out);
+}
+
 void register_stat_arb_tests(void) {
     RUN_TEST(test_zscore_state_init);
     RUN_TEST(test_zscore_state_init_invalid);
@@ -375,4 +454,8 @@ void register_stat_arb_tests(void) {
     RUN_TEST(test_coint_spread_z_invalid_prices);
     RUN_TEST(test_coint_spread_z_batch);
     RUN_TEST(test_zscore_window_full);
+    RUN_TEST(test_coint_spread_z_batch_basic);
+    RUN_TEST(test_coint_spread_z_batch_null_args);
+    RUN_TEST(test_coint_spread_z_batch_invalid_dimensions);
+    RUN_TEST(test_coint_spread_z_batch_large);
 }

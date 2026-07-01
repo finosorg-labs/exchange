@@ -143,11 +143,11 @@ FC_API fc_status_t fc_ex_strat_coint_beta(
 );
 
 /**
- * @brief Compute spread and rolling Z-Score for multiple pairs
+ * @brief Compute spread and rolling Z-Score for multiple pairs (incremental update)
  *
  * Real-time calculation of cointegration spread and standardized Z-Score
  * for mean reversion signal generation. This is the hot path function called
- * on every price update.
+ * on every price update with incremental O(1) rolling window updates.
  *
  * For each pair i:
  *   spread[i] = log(pa[i]) - beta[i] * log(pb[i])
@@ -187,6 +187,7 @@ FC_API fc_status_t fc_ex_strat_coint_beta(
  * @note Logarithms computed in batch for SIMD efficiency
  * @note Z-Score requires at least 2 samples in window for valid sigma
  * @note First window_size-1 updates will return z=0 until window fills
+ * @note Use this for tick-by-tick updates in event-driven strategies
  */
 FC_API fc_status_t fc_ex_strat_coint_spread_z(
     double* spread_out,
@@ -196,6 +197,53 @@ FC_API fc_status_t fc_ex_strat_coint_spread_z(
     const double* beta,
     fc_ex_strat_zscore_state_t* z_states,
     size_t n_pairs
+);
+
+/**
+ * @brief Compute rolling Z-Score from spread history (batch recalculation)
+ *
+ * Batch recalculation of Z-Scores from complete spread history using
+ * SIMD-optimized rolling window statistics. This is used for periodic
+ * full-market recalibration or initialization.
+ *
+ * For each pair i and each position j in window:
+ *   z[i*window_size + j] = (spread[i*window_size + j] - mu[i,j]) / sigma[i,j]
+ *
+ * Where mu[i,j] and sigma[i,j] are computed from rolling window ending at j.
+ *
+ * @param[out] z_out Output array of Z-Scores (length n_pairs × window_size)
+ * @param[in] spread_history Spread history, shape (n_pairs × window_size)
+ * @param[in] n_pairs Number of pairs
+ * @param[in] window_size Rolling window size for statistics
+ * @return FC_OK on success, error code otherwise
+ *
+ * Time complexity: O(n_pairs × window_size)
+ * Space complexity: O(n_pairs × window_size) temporary allocation
+ * Thread safety: Thread-safe (no shared state)
+ *
+ * Input validation:
+ * - z_out, spread_history must not be NULL
+ * - n_pairs must be > 0
+ * - window_size must be > 1
+ *
+ * Performance notes:
+ * - Uses fc_stats_rolling_mean_f64 and fc_stats_rolling_stddev_f64
+ * - SIMD-optimized for large datasets (n_pairs × window_size >= 1000)
+ * - Suitable for batch processing of historical data
+ *
+ * Data layout:
+ * - spread_history[i * window_size + j] = spread for pair i at time j
+ * - z_out[i * window_size + j] = Z-Score for pair i at time j
+ *
+ * @note Use this for periodic full-market recalculation, not tick-by-tick updates
+ * @note For real-time updates, use fc_ex_strat_coint_spread_z instead
+ * @note NaN values in spread_history will result in FC_ERR_NAN_INPUT
+ */
+FC_API fc_status_t fc_ex_strat_coint_spread_z_batch(
+    double* z_out,
+    const double* spread_history,
+    size_t n_pairs,
+    size_t window_size
 );
 
 #ifdef __cplusplus
