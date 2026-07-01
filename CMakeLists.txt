@@ -217,6 +217,7 @@ set(EXCHANGE_SOURCES
     exchange-c/signal-c/postprocess.c
     exchange-c/signal-c/alpha.c
     exchange-c/strategy-c/market_maker.c
+    exchange-c/strategy-c/stat_arb.c
 )
 
 # Create object library

@@ -45,6 +45,7 @@ add_executable(exchange_benchmarks
     bench_postprocess.c
     bench_alpha.c
     bench_market_maker.c
+    bench_stat_arb.c
 )
 
 # Link with benchmark framework and exchange library

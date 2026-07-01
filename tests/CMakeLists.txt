@@ -23,6 +23,7 @@ add_executable(exchange_tests
     test_postprocess.c
     test_alpha.c
     test_market_maker.c
+    test_stat_arb.c
 )
 
 # Link with exchange library
