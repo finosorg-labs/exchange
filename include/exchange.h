@@ -15,6 +15,7 @@
 #include "signal/ofi.h"
 #include "signal/spread.h"
 #include "signal/vwap_dev.h"
+#include "strategy/market_maker.h"
 #include "ticker.h"
 
 #ifdef __cplusplus

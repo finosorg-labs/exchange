@@ -26,6 +26,7 @@ extern void bench_feature_run(void);
 extern void bench_normalize_run(void);
 extern void bench_postprocess_run(void);
 extern void bench_alpha_run(void);
+extern void bench_market_maker_run(void);
 
 /* Entry point for exchange benchmarks */
 void bench_exchange_run(void) {
@@ -51,6 +52,7 @@ void bench_exchange_run(void) {
     bench_normalize_run();
     bench_postprocess_run();
     bench_alpha_run();
+    bench_market_maker_run();
 
     printf("\n");
     printf("============================================================\n");

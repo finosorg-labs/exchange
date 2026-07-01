@@ -22,6 +22,7 @@ add_executable(exchange_tests
     test_normalize.c
     test_postprocess.c
     test_alpha.c
+    test_market_maker.c
 )
 
 # Link with exchange library
