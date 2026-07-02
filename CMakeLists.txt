@@ -220,6 +220,7 @@ set(EXCHANGE_SOURCES
     exchange-c/strategy-c/stat_arb.c
     exchange-c/strategy-c/latency_arb.c
     exchange-c/strategy-c/index_rebal.c
+    exchange-c/strategy-c/delta_hedge.c
 )
 
 # Create object library
