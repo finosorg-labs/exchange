@@ -47,6 +47,7 @@ add_executable(exchange_benchmarks
     bench_market_maker.c
     bench_stat_arb.c
     bench_latency_arb.c
+    bench_index_rebal.c
 )
 
 # Link with benchmark framework and exchange library

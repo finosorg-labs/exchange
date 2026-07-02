@@ -27,6 +27,7 @@ extern void register_alpha_tests(void);
 extern void register_market_maker_tests(void);
 extern void register_stat_arb_tests(void);
 extern void register_latency_arb_tests(void);
+extern void register_index_rebal_tests(void);
 
 /* Entry point for exchange tests */
 void register_exchange_tests(void) {
@@ -49,4 +50,5 @@ void register_exchange_tests(void) {
     register_market_maker_tests();
     register_stat_arb_tests();
     register_latency_arb_tests();
+    register_index_rebal_tests();
 }

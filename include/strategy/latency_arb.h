@@ -12,6 +12,14 @@
  * and backtesting. The real-time hot path (tick-by-tick prediction + hit detection + order
  * submission <200ns) is implemented in FPGA hardware to bypass software stack overhead.
  *
+ * Implementation notes:
+ * - Coefficient calibration can alternatively use fc_ex_sig_arb_spread (from signal layer)
+ *   for cross-market price relationship analysis, combined with regression to derive a/b
+ * - Current implementation uses direct OLS regression via fc_optim_least_squares for
+ *   numerical stability and simplicity
+ * - For multi-venue scenarios, consider fc_ex_sig_arb_spread + regression as documented
+ *   in HFT策略引擎层技术架构文档 4.3
+ *
  * Key formulas:
  *   Calibration (offline):  P_slow = a * P_fast + b + epsilon
  *                          (a, b) <- OLS regression on historical prices
@@ -54,6 +62,12 @@ extern "C" {
  *
  * Uses OLS regression via fc_optim_least_squares for numerical stability.
  *
+ * Alternative implementation:
+ * For multi-venue cross-market scenarios, coefficients can be derived by:
+ * 1. Use fc_ex_sig_arb_spread to compute cross-market price relationships
+ * 2. Apply regression analysis on the spread matrix to derive prediction coefficients
+ * 3. This approach is documented in HFT策略引擎层技术架构文档 4.3 延迟套利
+ *
  * @param[out] coef_a_out Output array of slope coefficients a (length n_pairs)
  * @param[out] coef_b_out Output array of intercept coefficients b (length n_pairs)
  * @param[in] hist_fast Fast market price history, shape (n_pairs × window), row-major
@@ -80,6 +94,7 @@ extern "C" {
  * @note Input prices should be raw prices (not log-transformed)
  * @note NaN/Inf in inputs will propagate or cause regression failure
  * @note Coefficients are loaded into FPGA; software layer does not use them in hot path
+ * @note Can be combined with fc_ex_sig_arb_spread for cross-market spread analysis
  */
 FC_API fc_status_t fc_ex_strat_latarb_calibrate(
     double* coef_a_out,

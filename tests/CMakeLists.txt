@@ -25,6 +25,7 @@ add_executable(exchange_tests
     test_market_maker.c
     test_stat_arb.c
     test_latency_arb.c
+    test_index_rebal.c
 )
 
 # Link with exchange library
