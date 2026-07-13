@@ -561,4 +561,69 @@ void fc_test_print_leak_report(void);
  */
 #define ASSERT_NOT_NULL(ptr) FC_TEST_ASSERT((ptr) != NULL)
 
+/*
+ * Test memory management helpers
+ */
+
+/**
+ * @brief Maximum number of tracked allocations per test
+ */
+#define FC_TEST_MAX_ALLOCS 32
+
+/**
+ * @brief Register a memory allocation for automatic cleanup
+ *
+ * Usage:
+ *   void* ptr = malloc(size);
+ *   FC_TEST_TRACK_ALLOC(ptr);
+ *
+ * The memory will be automatically freed if the test fails or completes.
+ */
+void fc_test_track_alloc(void* ptr);
+
+/**
+ * @brief Unregister a memory allocation (if manually freed)
+ */
+void fc_test_untrack_alloc(void* ptr);
+
+/**
+ * @brief Clean up all tracked allocations for current test
+ *
+ * Called automatically at test end, but can be called manually if needed.
+ */
+void fc_test_cleanup_allocs(void);
+
+/**
+ * @brief Helper macro to allocate and track memory in one step
+ *
+ * Usage:
+ *   double* data = FC_TEST_MALLOC(double, 1000);
+ *   if (!data) {
+ *       // All previously tracked allocations are automatically freed
+ *       FC_TEST_ASSERT(0 && "Allocation failed");
+ *       return;
+ *   }
+ */
+#define FC_TEST_MALLOC(type, count) (type*) fc_test_malloc_tracked(sizeof(type) * (count))
+
+/**
+ * @brief Allocate memory and track it for automatic cleanup
+ */
+void* fc_test_malloc_tracked(size_t size);
+
+/**
+ * @brief Free tracked memory
+ *
+ * Usage:
+ *   FC_TEST_FREE(ptr);
+ */
+#define FC_TEST_FREE(ptr)                                                                          \
+    do {                                                                                           \
+        if (ptr) {                                                                                 \
+            fc_test_untrack_alloc(ptr);                                                            \
+            free(ptr);                                                                             \
+            ptr = NULL;                                                                            \
+        }                                                                                          \
+    } while (0)
+
 #endif /* FC_TEST_FRAMEWORK_H */

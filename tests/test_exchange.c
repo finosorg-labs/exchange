@@ -31,6 +31,7 @@ extern void register_index_rebal_tests(void);
 extern void register_delta_hedge_tests(void);
 extern void register_marginal_var_tests(void);
 extern void register_factor_risk_tests(void);
+extern void register_stress_scenario_tests(void);
 
 /* Entry point for exchange tests */
 void register_exchange_tests(void) {
@@ -57,4 +58,5 @@ void register_exchange_tests(void) {
     register_delta_hedge_tests();
     register_marginal_var_tests();
     register_factor_risk_tests();
+    register_stress_scenario_tests();
 }

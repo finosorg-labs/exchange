@@ -223,6 +223,7 @@ set(EXCHANGE_SOURCES
     exchange-c/strategy-c/delta_hedge.c
     exchange-c/risk-c/marginal_var.c
     exchange-c/risk-c/factor_risk.c
+    exchange-c/risk-c/stress_scenario.c
 )
 
 # Copy dependency headers to a separate installed-headers directory for distribution

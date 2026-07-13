@@ -29,6 +29,7 @@ add_executable(exchange_tests
     test_delta_hedge.c
     test_marginal_var.c
     test_factor_risk.c
+    test_stress_scenario.c
 )
 
 # Link with exchange library

@@ -185,6 +185,9 @@ void fc_test_end(void) {
         break;
     }
 
+    /* Clean up any tracked allocations */
+    fc_test_cleanup_allocs();
+
     g_current_test = NULL;
 }
 
@@ -373,6 +376,56 @@ int fc_test_generate_coverage_report(void) {
 /*
  * Memory tracking (stub implementation)
  */
+
+/* Per-test memory tracking */
+static void* g_tracked_allocs[FC_TEST_MAX_ALLOCS];
+static int g_num_tracked = 0;
+
+void fc_test_track_alloc(void* ptr) {
+    if (!ptr)
+        return;
+
+    if (g_num_tracked >= FC_TEST_MAX_ALLOCS) {
+        fprintf(stderr, "Warning: Maximum tracked allocations (%d) exceeded\n", FC_TEST_MAX_ALLOCS);
+        return;
+    }
+
+    g_tracked_allocs[g_num_tracked++] = ptr;
+}
+
+void fc_test_untrack_alloc(void* ptr) {
+    if (!ptr)
+        return;
+
+    for (int i = 0; i < g_num_tracked; i++) {
+        if (g_tracked_allocs[i] == ptr) {
+            /* Shift remaining entries */
+            for (int j = i; j < g_num_tracked - 1; j++) {
+                g_tracked_allocs[j] = g_tracked_allocs[j + 1];
+            }
+            g_num_tracked--;
+            return;
+        }
+    }
+}
+
+void fc_test_cleanup_allocs(void) {
+    for (int i = 0; i < g_num_tracked; i++) {
+        if (g_tracked_allocs[i]) {
+            free(g_tracked_allocs[i]);
+            g_tracked_allocs[i] = NULL;
+        }
+    }
+    g_num_tracked = 0;
+}
+
+void* fc_test_malloc_tracked(size_t size) {
+    void* ptr = malloc(size);
+    if (ptr) {
+        fc_test_track_alloc(ptr);
+    }
+    return ptr;
+}
 
 void fc_test_enable_leak_detection(void) {
 }
