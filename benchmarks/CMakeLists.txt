@@ -50,6 +50,7 @@ add_executable(exchange_benchmarks
     bench_index_rebal.c
     bench_delta_hedge.c
     bench_marginal_var.c
+    bench_factor_risk.c
 )
 
 # Link with benchmark framework and exchange library

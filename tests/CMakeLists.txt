@@ -28,6 +28,7 @@ add_executable(exchange_tests
     test_index_rebal.c
     test_delta_hedge.c
     test_marginal_var.c
+    test_factor_risk.c
 )
 
 # Link with exchange library
