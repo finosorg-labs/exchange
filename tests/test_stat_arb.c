@@ -3,9 +3,9 @@
  * @brief Unit tests for statistical arbitrage strategy
  */
 
-#include "test_framework.h"
-#include "strategy/stat_arb.h"
 #include "platform.h"
+#include "strategy/stat_arb.h"
+#include "test_framework.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,9 +44,9 @@ TEST(test_zscore_state_reset) {
     fc_ex_strat_zscore_state_t state;
     fc_ex_strat_zscore_state_init(&state, 10);
 
-    state.count = 5;
-    state.head = 3;
-    state.sum = 10.0;
+    state.count  = 5;
+    state.head   = 3;
+    state.sum    = 10.0;
     state.sum_sq = 25.0;
 
     fc_ex_strat_zscore_state_reset(&state);
@@ -61,10 +61,10 @@ TEST(test_zscore_state_reset) {
 
 TEST(test_coint_beta_basic) {
     const size_t n_pairs = 2;
-    const size_t window = 100;
+    const size_t window  = 100;
 
-    double* log_pa = (double*)malloc(n_pairs * window * sizeof(double));
-    double* log_pb = (double*)malloc(n_pairs * window * sizeof(double));
+    double* log_pa = (double*) malloc(n_pairs * window * sizeof(double));
+    double* log_pb = (double*) malloc(n_pairs * window * sizeof(double));
     double beta_out[2];
 
     // Use simpler linear relationship: log_pa = beta * log_pb (no intercept)
@@ -88,12 +88,12 @@ TEST(test_coint_beta_basic) {
 }
 
 TEST(test_coint_beta_perfect_cointegration) {
-    const size_t n_pairs = 1;
-    const size_t window = 50;
+    const size_t n_pairs   = 1;
+    const size_t window    = 50;
     const double true_beta = 1.5;
 
-    double* log_pa = (double*)malloc(window * sizeof(double));
-    double* log_pb = (double*)malloc(window * sizeof(double));
+    double* log_pa = (double*) malloc(window * sizeof(double));
+    double* log_pb = (double*) malloc(window * sizeof(double));
     double beta_out[1];
 
     for (size_t i = 0; i < window; i++) {
@@ -143,19 +143,18 @@ TEST(test_coint_beta_invalid_dimensions) {
 TEST(test_coint_spread_z_basic) {
     const size_t n_pairs = 2;
 
-    double pa[] = {100.0, 200.0};
-    double pb[] = {50.0, 100.0};
-    double beta[] = {1.5, 2.0};
+    double pa[]          = {100.0, 200.0};
+    double pb[]          = {50.0, 100.0};
+    double beta[]        = {1.5, 2.0};
     double spread_out[2] = {0.0, 0.0};
-    double z_out[2] = {0.0, 0.0};
+    double z_out[2]      = {0.0, 0.0};
 
     fc_ex_strat_zscore_state_t states[2];
     fc_ex_strat_zscore_state_init(&states[0], 10);
     fc_ex_strat_zscore_state_init(&states[1], 10);
 
-    fc_status_t status = fc_ex_strat_coint_spread_z(
-        spread_out, z_out, pa, pb, beta, states, n_pairs
-    );
+    fc_status_t status =
+        fc_ex_strat_coint_spread_z(spread_out, z_out, pa, pb, beta, states, n_pairs);
     ASSERT_EQ(status, FC_OK);
 
     ASSERT_TRUE(!isnan(spread_out[0]));
@@ -166,7 +165,7 @@ TEST(test_coint_spread_z_basic) {
 }
 
 TEST(test_coint_spread_z_rolling_window) {
-    const size_t n_pairs = 1;
+    const size_t n_pairs     = 1;
     const size_t window_size = 5;
 
     double pa[1];
@@ -185,9 +184,8 @@ TEST(test_coint_spread_z_rolling_window) {
         pa[0] = test_prices_a[i];
         pb[0] = test_prices_b[i];
 
-        fc_status_t status = fc_ex_strat_coint_spread_z(
-            spread_out, z_out, pa, pb, beta, &state, n_pairs
-        );
+        fc_status_t status =
+            fc_ex_strat_coint_spread_z(spread_out, z_out, pa, pb, beta, &state, n_pairs);
         ASSERT_EQ(status, FC_OK);
 
         if (i >= window_size) {
@@ -199,7 +197,7 @@ TEST(test_coint_spread_z_rolling_window) {
 }
 
 TEST(test_coint_spread_z_mean_reversion) {
-    const size_t n_pairs = 1;
+    const size_t n_pairs     = 1;
     const size_t window_size = 10;
 
     double pa[1];
@@ -230,8 +228,8 @@ TEST(test_coint_spread_z_mean_reversion) {
 }
 
 TEST(test_coint_spread_z_null_args) {
-    double pa[1] = {100.0};
-    double pb[1] = {50.0};
+    double pa[1]   = {100.0};
+    double pb[1]   = {50.0};
     double beta[1] = {1.5};
     double spread_out[1];
     double z_out[1];
@@ -262,8 +260,8 @@ TEST(test_coint_spread_z_null_args) {
 TEST(test_coint_spread_z_invalid_prices) {
     const size_t n_pairs = 3;
 
-    double pa[] = {100.0, -50.0, 0.0};
-    double pb[] = {50.0, 100.0, 50.0};
+    double pa[]   = {100.0, -50.0, 0.0};
+    double pb[]   = {50.0, 100.0, 50.0};
     double beta[] = {1.5, 2.0, 1.0};
     double spread_out[3];
     double z_out[3];
@@ -273,9 +271,8 @@ TEST(test_coint_spread_z_invalid_prices) {
         fc_ex_strat_zscore_state_init(&states[i], 10);
     }
 
-    fc_status_t status = fc_ex_strat_coint_spread_z(
-        spread_out, z_out, pa, pb, beta, states, n_pairs
-    );
+    fc_status_t status =
+        fc_ex_strat_coint_spread_z(spread_out, z_out, pa, pb, beta, states, n_pairs);
     ASSERT_EQ(status, FC_OK);
 
     ASSERT_TRUE(!isnan(spread_out[0]));
@@ -292,28 +289,27 @@ TEST(test_coint_spread_z_invalid_prices) {
 }
 
 TEST(test_coint_spread_z_batch) {
-    const size_t n_pairs = 100;
+    const size_t n_pairs     = 100;
     const size_t window_size = 20;
 
-    double* pa = (double*)malloc(n_pairs * sizeof(double));
-    double* pb = (double*)malloc(n_pairs * sizeof(double));
-    double* beta = (double*)malloc(n_pairs * sizeof(double));
-    double* spread_out = (double*)malloc(n_pairs * sizeof(double));
-    double* z_out = (double*)malloc(n_pairs * sizeof(double));
+    double* pa         = (double*) malloc(n_pairs * sizeof(double));
+    double* pb         = (double*) malloc(n_pairs * sizeof(double));
+    double* beta       = (double*) malloc(n_pairs * sizeof(double));
+    double* spread_out = (double*) malloc(n_pairs * sizeof(double));
+    double* z_out      = (double*) malloc(n_pairs * sizeof(double));
 
     fc_ex_strat_zscore_state_t* states =
-        (fc_ex_strat_zscore_state_t*)malloc(n_pairs * sizeof(fc_ex_strat_zscore_state_t));
+        (fc_ex_strat_zscore_state_t*) malloc(n_pairs * sizeof(fc_ex_strat_zscore_state_t));
 
     for (size_t i = 0; i < n_pairs; i++) {
-        pa[i] = 100.0 + i * 0.5;
-        pb[i] = 50.0 + i * 0.25;
+        pa[i]   = 100.0 + i * 0.5;
+        pb[i]   = 50.0 + i * 0.25;
         beta[i] = 1.0 + i * 0.01;
         fc_ex_strat_zscore_state_init(&states[i], window_size);
     }
 
-    fc_status_t status = fc_ex_strat_coint_spread_z(
-        spread_out, z_out, pa, pb, beta, states, n_pairs
-    );
+    fc_status_t status =
+        fc_ex_strat_coint_spread_z(spread_out, z_out, pa, pb, beta, states, n_pairs);
     ASSERT_EQ(status, FC_OK);
 
     for (size_t i = 0; i < n_pairs; i++) {
@@ -330,7 +326,7 @@ TEST(test_coint_spread_z_batch) {
 }
 
 TEST(test_zscore_window_full) {
-    const size_t n_pairs = 1;
+    const size_t n_pairs     = 1;
     const size_t window_size = 3;
 
     double pa[1];
@@ -361,11 +357,11 @@ TEST(test_zscore_window_full) {
 }
 
 TEST(test_coint_spread_z_batch_basic) {
-    const size_t n_pairs = 2;
+    const size_t n_pairs     = 2;
     const size_t window_size = 10;
 
     double spread_history[20] = {0};
-    double z_out[20] = {0};
+    double z_out[20]          = {0};
 
     // Pair 0: constant spread (should have z=0)
     for (size_t j = 0; j < window_size; j++) {
@@ -374,10 +370,11 @@ TEST(test_coint_spread_z_batch_basic) {
 
     // Pair 1: linearly increasing spread
     for (size_t j = 0; j < window_size; j++) {
-        spread_history[1 * window_size + j] = (double)j;
+        spread_history[1 * window_size + j] = (double) j;
     }
 
-    fc_status_t status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, n_pairs, window_size);
+    fc_status_t status =
+        fc_ex_strat_coint_spread_z_batch(z_out, spread_history, n_pairs, window_size);
     ASSERT_EQ(status, FC_OK);
 
     // Pair 0: constant values should have z ≈ 0
@@ -391,7 +388,7 @@ TEST(test_coint_spread_z_batch_basic) {
 
 TEST(test_coint_spread_z_batch_null_args) {
     double spread_history[10] = {0};
-    double z_out[10] = {0};
+    double z_out[10]          = {0};
 
     fc_status_t status = fc_ex_strat_coint_spread_z_batch(NULL, spread_history, 1, 10);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
@@ -402,7 +399,7 @@ TEST(test_coint_spread_z_batch_null_args) {
 
 TEST(test_coint_spread_z_batch_invalid_dimensions) {
     double spread_history[10] = {0};
-    double z_out[10] = {0};
+    double z_out[10]          = {0};
 
     fc_status_t status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, 0, 10);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
@@ -415,19 +412,20 @@ TEST(test_coint_spread_z_batch_invalid_dimensions) {
 }
 
 TEST(test_coint_spread_z_batch_large) {
-    const size_t n_pairs = 100;
+    const size_t n_pairs     = 100;
     const size_t window_size = 50;
-    const size_t total_size = n_pairs * window_size;
+    const size_t total_size  = n_pairs * window_size;
 
-    double* spread_history = (double*)malloc(total_size * sizeof(double));
-    double* z_out = (double*)malloc(total_size * sizeof(double));
+    double* spread_history = (double*) malloc(total_size * sizeof(double));
+    double* z_out          = (double*) malloc(total_size * sizeof(double));
 
     srand(42);
     for (size_t i = 0; i < total_size; i++) {
         spread_history[i] = (rand() % 1000) / 100.0;
     }
 
-    fc_status_t status = fc_ex_strat_coint_spread_z_batch(z_out, spread_history, n_pairs, window_size);
+    fc_status_t status =
+        fc_ex_strat_coint_spread_z_batch(z_out, spread_history, n_pairs, window_size);
     ASSERT_EQ(status, FC_OK);
 
     // Check that z-scores are computed

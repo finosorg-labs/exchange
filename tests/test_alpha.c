@@ -21,13 +21,22 @@
 /* Test basic weighted aggregation with uniform weights */
 TEST(test_alpha_basic_aggregation) {
     const size_t n_symbols = 3;
-    const int n_signals = 4;
+    const int n_signals    = 4;
 
     /* Signals: 3 symbols × 4 signals */
     double signals[] = {
-        1.0, 2.0, 3.0, 4.0,  /* Symbol 0: all positive */
-        -1.0, -2.0, -3.0, -4.0,  /* Symbol 1: all negative */
-        1.0, -1.0, 2.0, -2.0   /* Symbol 2: mixed */
+        1.0,
+        2.0,
+        3.0,
+        4.0, /* Symbol 0: all positive */
+        -1.0,
+        -2.0,
+        -3.0,
+        -4.0, /* Symbol 1: all negative */
+        1.0,
+        -1.0,
+        2.0,
+        -2.0 /* Symbol 2: mixed */
     };
 
     /* Uniform weights */
@@ -37,10 +46,10 @@ TEST(test_alpha_basic_aggregation) {
     double confidence_out[3];
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,  /* Already normalized */
+        .normalize_weights  = 0, /* Already normalized */
         .per_symbol_weights = 0, /* Uniform weights */
-        .min_confidence = 0.0,
-        .strength_scale = 1.0    /* Default scale for normalized signals */
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0 /* Default scale for normalized signals */
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -68,24 +77,21 @@ TEST(test_alpha_basic_aggregation) {
 /* Test weight normalization */
 TEST(test_alpha_weight_normalization) {
     const size_t n_symbols = 2;
-    const int n_signals = 3;
+    const int n_signals    = 3;
 
-    double signals[] = {
-        1.0, 2.0, 3.0,
-        -1.0, -2.0, -3.0
-    };
+    double signals[] = {1.0, 2.0, 3.0, -1.0, -2.0, -3.0};
 
     /* Non-normalized weights */
-    double weights[] = {1.0, 2.0, 3.0};  /* Sum = 6.0 */
+    double weights[] = {1.0, 2.0, 3.0}; /* Sum = 6.0 */
 
     double alpha_out[2];
     double confidence_out[2];
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 1,  /* Enable normalization */
+        .normalize_weights  = 1, /* Enable normalization */
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -105,27 +111,28 @@ TEST(test_alpha_weight_normalization) {
 /* Test per-symbol weights */
 TEST(test_alpha_per_symbol_weights) {
     const size_t n_symbols = 2;
-    const int n_signals = 3;
+    const int n_signals    = 3;
 
-    double signals[] = {
-        1.0, 2.0, 3.0,
-        1.0, 2.0, 3.0
-    };
+    double signals[] = {1.0, 2.0, 3.0, 1.0, 2.0, 3.0};
 
     /* Per-symbol weights: different for each symbol */
     double weights[] = {
-        0.5, 0.3, 0.2,  /* Symbol 0 weights */
-        0.2, 0.3, 0.5   /* Symbol 1 weights */
+        0.5,
+        0.3,
+        0.2, /* Symbol 0 weights */
+        0.2,
+        0.3,
+        0.5 /* Symbol 1 weights */
     };
 
     double alpha_out[2];
     double confidence_out[2];
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
-        .per_symbol_weights = 1,  /* Per-symbol weights */
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .normalize_weights  = 0,
+        .per_symbol_weights = 1, /* Per-symbol weights */
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -144,11 +151,15 @@ TEST(test_alpha_per_symbol_weights) {
 /* Test minimum confidence threshold */
 TEST(test_alpha_min_confidence_threshold) {
     const size_t n_symbols = 2;
-    const int n_signals = 3;
+    const int n_signals    = 3;
 
     double signals[] = {
-        1.0, 2.0, 3.0,      /* Symbol 0: strong agreement */
-        1.0, -1.0, 0.5      /* Symbol 1: weak/mixed */
+        1.0,
+        2.0,
+        3.0, /* Symbol 0: strong agreement */
+        1.0,
+        -1.0,
+        0.5 /* Symbol 1: weak/mixed */
     };
 
     double weights[] = {0.33, 0.33, 0.34};
@@ -157,10 +168,10 @@ TEST(test_alpha_min_confidence_threshold) {
     double confidence_out[2];
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.7,  /* High threshold */
-        .strength_scale = 1.0
+        .min_confidence     = 0.7, /* High threshold */
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -181,12 +192,21 @@ TEST(test_alpha_min_confidence_threshold) {
 /* Test NaN/Inf handling */
 TEST(test_alpha_nan_inf_handling) {
     const size_t n_symbols = 3;
-    const int n_signals = 4;
+    const int n_signals    = 4;
 
     double signals[] = {
-        1.0, 2.0, NAN, 3.0,        /* Symbol 0: contains NaN */
-        1.0, INFINITY, 2.0, 3.0,   /* Symbol 1: contains Inf */
-        NAN, NAN, NAN, NAN         /* Symbol 2: all NaN */
+        1.0,
+        2.0,
+        NAN,
+        3.0, /* Symbol 0: contains NaN */
+        1.0,
+        INFINITY,
+        2.0,
+        3.0, /* Symbol 1: contains Inf */
+        NAN,
+        NAN,
+        NAN,
+        NAN /* Symbol 2: all NaN */
     };
 
     double weights[] = {0.25, 0.25, 0.25, 0.25};
@@ -195,10 +215,10 @@ TEST(test_alpha_nan_inf_handling) {
     double confidence_out[3];
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -223,19 +243,19 @@ TEST(test_alpha_nan_inf_handling) {
 /* Test weight normalization with zero weights */
 TEST(test_alpha_zero_weights) {
     const size_t n_symbols = 1;
-    const int n_signals = 3;
+    const int n_signals    = 3;
 
     double signals[] = {1.0, 2.0, 3.0};
-    double weights[] = {0.0, 0.0, 0.0};  /* All zero */
+    double weights[] = {0.0, 0.0, 0.0}; /* All zero */
 
     double alpha_out[1];
     double confidence_out[1];
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 1,
+        .normalize_weights  = 1,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -252,11 +272,15 @@ TEST(test_alpha_zero_weights) {
 /* Test standalone weight normalization */
 TEST(test_normalize_weights) {
     const size_t n_symbols = 2;
-    const int n_signals = 3;
+    const int n_signals    = 3;
 
     double weights_in[] = {
-        1.0, 2.0, 3.0,  /* Symbol 0 */
-        4.0, 5.0, 6.0   /* Symbol 1 */
+        1.0,
+        2.0,
+        3.0, /* Symbol 0 */
+        4.0,
+        5.0,
+        6.0 /* Symbol 1 */
     };
 
     double weights_out[6];
@@ -284,12 +308,21 @@ TEST(test_normalize_weights) {
 /* Test signal agreement computation */
 TEST(test_compute_agreement) {
     const size_t n_symbols = 3;
-    const int n_signals = 4;
+    const int n_signals    = 4;
 
     double signals[] = {
-        1.0, 2.0, 3.0, 4.0,       /* Symbol 0: all positive, increasing */
-        -1.0, -2.0, -3.0, -4.0,   /* Symbol 1: all negative, decreasing */
-        1.0, 1.0, 1.0, 1.0        /* Symbol 2: all same (low variance) */
+        1.0,
+        2.0,
+        3.0,
+        4.0, /* Symbol 0: all positive, increasing */
+        -1.0,
+        -2.0,
+        -3.0,
+        -4.0, /* Symbol 1: all negative, decreasing */
+        1.0,
+        1.0,
+        1.0,
+        1.0 /* Symbol 2: all same (low variance) */
     };
 
     double agreement_out[3];
@@ -310,21 +343,33 @@ TEST(test_compute_agreement) {
 /* Test inverse volatility weighting */
 TEST(test_inverse_vol_weights) {
     const size_t window_size = 5;
-    const int n_signals = 3;
+    const int n_signals      = 3;
 
     /* Historical signals: 5 time steps × 3 signals */
     double signals_hist[] = {
-        1.0, 5.0, 10.0,  /* t=0 */
-        1.1, 5.5, 12.0,  /* t=1 */
-        0.9, 4.5, 8.0,   /* t=2 */
-        1.0, 5.0, 11.0,  /* t=3 */
-        1.0, 6.0, 9.0    /* t=4 */
+        1.0,
+        5.0,
+        10.0, /* t=0 */
+        1.1,
+        5.5,
+        12.0, /* t=1 */
+        0.9,
+        4.5,
+        8.0, /* t=2 */
+        1.0,
+        5.0,
+        11.0, /* t=3 */
+        1.0,
+        6.0,
+        9.0 /* t=4 */
     };
 
     double weights_out[3];
-    double work_buffer[3];  /* Work buffer for n_signals doubles */
+    double work_buffer[3]; /* Work buffer for n_signals doubles */
 
-    fc_status_t status = fc_ex_sig_inverse_vol_weights(weights_out, signals_hist, work_buffer, window_size, n_signals);
+    fc_status_t status = fc_ex_sig_inverse_vol_weights(
+        weights_out, signals_hist, work_buffer, window_size, n_signals
+    );
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
     /* Signal 0 has lowest volatility, should get highest weight */
@@ -345,10 +390,10 @@ TEST(test_alpha_input_validation) {
     double weights[] = {1.0};
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     /* NULL pointers */
@@ -357,8 +402,7 @@ TEST(test_alpha_input_validation) {
         FC_ERR_INVALID_ARG
     );
     FC_TEST_ASSERT_EQ(
-        fc_ex_sig_alpha_aggregate(alpha_out, NULL, signals, weights, &cfg, 1, 1),
-        FC_ERR_INVALID_ARG
+        fc_ex_sig_alpha_aggregate(alpha_out, NULL, signals, weights, &cfg, 1, 1), FC_ERR_INVALID_ARG
     );
     FC_TEST_ASSERT_EQ(
         fc_ex_sig_alpha_aggregate(alpha_out, confidence_out, NULL, weights, &cfg, 1, 1),
@@ -412,13 +456,17 @@ TEST(test_alpha_input_validation) {
 /* Test strength_scale impact on confidence */
 TEST(test_alpha_strength_scale) {
     const size_t n_symbols = 2;
-    const int n_signals = 3;
+    const int n_signals    = 3;
 
     /* Symbol 0: weak signals (all 0.1), all positive - high agreement, low strength */
     /* Symbol 1: strong signals (all 10.0), all positive - high agreement, high strength */
     double signals[] = {
-        0.1, 0.1, 0.1,   /* Symbol 0 */
-        10.0, 10.0, 10.0 /* Symbol 1 */
+        0.1,
+        0.1,
+        0.1, /* Symbol 0 */
+        10.0,
+        10.0,
+        10.0 /* Symbol 1 */
     };
     double weights[] = {0.33, 0.33, 0.34};
 
@@ -427,10 +475,10 @@ TEST(test_alpha_strength_scale) {
 
     /* Test with scale=1.0 (assumes signals in [-1,1]) */
     fc_ex_alpha_cfg_t cfg1 = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(
@@ -440,10 +488,10 @@ TEST(test_alpha_strength_scale) {
 
     /* Test with scale=10.0 (assumes larger signals) */
     fc_ex_alpha_cfg_t cfg2 = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 10.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 10.0
     };
 
     status = fc_ex_sig_alpha_aggregate(
@@ -455,15 +503,17 @@ TEST(test_alpha_strength_scale) {
      * - Symbol 0 (avg_strength=0.1): tanh(0.1/1.0)=0.099 -> low confidence
      * - Symbol 1 (avg_strength=10.0): tanh(10.0/1.0)=0.999 -> very high confidence
      */
-    FC_TEST_ASSERT(confidence_out1[0] < 0.2);  /* Weak signal, low confidence */
-    FC_TEST_ASSERT(confidence_out1[1] > 0.9);  /* Strong signal, high confidence */
+    FC_TEST_ASSERT(confidence_out1[0] < 0.2); /* Weak signal, low confidence */
+    FC_TEST_ASSERT(confidence_out1[1] > 0.9); /* Strong signal, high confidence */
 
     /* With scale=10.0:
      * - Symbol 0 (avg_strength=0.1): tanh(0.1/10.0)=0.01 -> very low confidence
      * - Symbol 1 (avg_strength=10.0): tanh(10.0/10.0)=tanh(1.0)=0.76 -> moderate-high confidence
      */
-    FC_TEST_ASSERT(confidence_out2[0] < 0.05);  /* Weak signal with larger scale */
-    FC_TEST_ASSERT(confidence_out2[1] > 0.7 && confidence_out2[1] < 0.8);  /* Strong signal normalized */
+    FC_TEST_ASSERT(confidence_out2[0] < 0.05); /* Weak signal with larger scale */
+    FC_TEST_ASSERT(
+        confidence_out2[1] > 0.7 && confidence_out2[1] < 0.8
+    ); /* Strong signal normalized */
 
     /* Confidence for symbol 1 should be lower with larger scale (less saturated) */
     FC_TEST_ASSERT(confidence_out2[1] < confidence_out1[1]);
@@ -472,16 +522,16 @@ TEST(test_alpha_strength_scale) {
 /* Test large batch */
 TEST(test_alpha_large_batch) {
     const size_t n_symbols = 1000;
-    const int n_signals = 10;
+    const int n_signals    = 10;
 
     /* Align sizes to 64-byte boundary */
     size_t signals_size = ((n_symbols * n_signals * sizeof(double) + 63) / 64) * 64;
     size_t weights_size = ((n_signals * sizeof(double) + 63) / 64) * 64;
-    size_t output_size = ((n_symbols * sizeof(double) + 63) / 64) * 64;
+    size_t output_size  = ((n_symbols * sizeof(double) + 63) / 64) * 64;
 
-    double* signals = (double*) aligned_alloc(64, signals_size);
-    double* weights = (double*) aligned_alloc(64, weights_size);
-    double* alpha_out = (double*) aligned_alloc(64, output_size);
+    double* signals        = (double*) aligned_alloc(64, signals_size);
+    double* weights        = (double*) aligned_alloc(64, weights_size);
+    double* alpha_out      = (double*) aligned_alloc(64, output_size);
     double* confidence_out = (double*) aligned_alloc(64, output_size);
 
     FC_TEST_ASSERT(signals && weights && alpha_out && confidence_out);
@@ -489,7 +539,7 @@ TEST(test_alpha_large_batch) {
     /* Initialize with pattern */
     for (size_t i = 0; i < n_symbols; i++) {
         for (int j = 0; j < n_signals; j++) {
-            signals[i * n_signals + j] = sin((double)(i + j) * 0.1);
+            signals[i * n_signals + j] = sin((double) (i + j) * 0.1);
         }
     }
 
@@ -498,10 +548,10 @@ TEST(test_alpha_large_batch) {
     }
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.0,
-        .strength_scale = 1.0
+        .min_confidence     = 0.0,
+        .strength_scale     = 1.0
     };
 
     fc_status_t status = fc_ex_sig_alpha_aggregate(

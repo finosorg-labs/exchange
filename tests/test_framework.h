@@ -21,7 +21,7 @@
 
 /*
  * Test framework configuration
-*/
+ */
 
 #define FC_TEST_VERSION "1.0.0"
 
@@ -42,26 +42,26 @@
 
 /*
  * Test result types
-*/
+ */
 
 /**
  * @brief Test result enumeration
  */
 typedef enum {
-    FC_TEST_PASSED = 0,
-    FC_TEST_FAILED = 1,
+    FC_TEST_PASSED  = 0,
+    FC_TEST_FAILED  = 1,
     FC_TEST_SKIPPED = 2,
 } fc_test_result_t;
 
 /*
  * Test function pointer type
-*/
+ */
 
 typedef void (*fc_test_fn)(void);
 
 /*
  * Test statistics
-*/
+ */
 
 /**
  * @brief Statistics for a test run
@@ -86,17 +86,17 @@ void fc_test_stats_print(const fc_test_stats_t* stats);
 
 /*
  * Assertion macros
-*/
+ */
 
 /**
  * @brief Basic assertion that condition is true
  */
-#define FC_TEST_ASSERT(cond) \
-    do { \
-        if (!(cond)) { \
-            fc_test_assert_fail(#cond, __FILE__, __LINE__, NULL); \
-            return; \
-        } \
+#define FC_TEST_ASSERT(cond)                                                                       \
+    do {                                                                                           \
+        if (!(cond)) {                                                                             \
+            fc_test_assert_fail(#cond, __FILE__, __LINE__, NULL);                                  \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
@@ -106,43 +106,48 @@ void fc_test_stats_print(const fc_test_stats_t* stats);
  * This is widely supported by GCC, Clang, and MSVC.
  */
 #ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
-#define FC_TEST_ASSERT_MSG(cond, msg, ...) \
-    do { \
-        if (!(cond)) { \
-            char _buf[FC_TEST_MAX_MSG_LEN]; \
-            snprintf(_buf, sizeof(_buf), msg, ##__VA_ARGS__); \
-            fc_test_assert_fail(#cond, __FILE__, __LINE__, _buf); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_MSG(cond, msg, ...)                                                         \
+    do {                                                                                           \
+        if (!(cond)) {                                                                             \
+            char _buf[FC_TEST_MAX_MSG_LEN];                                                        \
+            snprintf(_buf, sizeof(_buf), msg, ##__VA_ARGS__);                                      \
+            fc_test_assert_fail(#cond, __FILE__, __LINE__, _buf);                                  \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 #ifdef __clang__
-#pragma clang diagnostic pop
+#    pragma clang diagnostic pop
 #endif
 
 /**
  * @brief Assert that two values are equal
  */
-#define FC_TEST_ASSERT_EQ(actual, expected) \
-    do { \
-        if ((actual) != (expected)) { \
-            fc_test_assert_fail_eq(#actual " == " #expected, __FILE__, __LINE__, \
-                (intmax_t)(actual), (intmax_t)(expected)); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_EQ(actual, expected)                                                        \
+    do {                                                                                           \
+        if ((actual) != (expected)) {                                                              \
+            fc_test_assert_fail_eq(                                                                \
+                #actual " == " #expected,                                                          \
+                __FILE__,                                                                          \
+                __LINE__,                                                                          \
+                (intmax_t) (actual),                                                               \
+                (intmax_t) (expected)                                                              \
+            );                                                                                     \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
  * @brief Assert that two values are not equal
  */
-#define FC_TEST_ASSERT_NE(actual, expected) \
-    do { \
-        if ((actual) == (expected)) { \
-            fc_test_assert_fail_ne(#actual " != " #expected, __FILE__, __LINE__); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_NE(actual, expected)                                                        \
+    do {                                                                                           \
+        if ((actual) == (expected)) {                                                              \
+            fc_test_assert_fail_ne(#actual " != " #expected, __FILE__, __LINE__);                  \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
@@ -159,93 +164,101 @@ void fc_test_stats_print(const fc_test_stats_t* stats);
  * @brief Assert that two doubles are approximately equal
  * @param tolerance Relative tolerance for comparison
  */
-#define FC_TEST_ASSERT_DOUBLE_EQ(actual, expected, tolerance) \
-    do { \
-        double _actual = (actual); \
-        double _expected = (expected); \
-        double _diff = (_actual - _expected); \
-        double _abs_expected = (_expected >= 0 ? _expected : -_expected); \
-        double _rel_diff = _abs_expected > 0 ? _diff / _abs_expected : _diff; \
-        if (_rel_diff < -(tolerance) || _rel_diff > (tolerance)) { \
-            fc_test_assert_fail_double(#actual " ~= " #expected, __FILE__, __LINE__, \
-                _actual, _expected); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_DOUBLE_EQ(actual, expected, tolerance)                                      \
+    do {                                                                                           \
+        double _actual       = (actual);                                                           \
+        double _expected     = (expected);                                                         \
+        double _diff         = (_actual - _expected);                                              \
+        double _abs_expected = (_expected >= 0 ? _expected : -_expected);                          \
+        double _rel_diff     = _abs_expected > 0 ? _diff / _abs_expected : _diff;                  \
+        if (_rel_diff < -(tolerance) || _rel_diff > (tolerance)) {                                 \
+            fc_test_assert_fail_double(                                                            \
+                #actual " ~= " #expected, __FILE__, __LINE__, _actual, _expected                   \
+            );                                                                                     \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
  * @brief Assert that two doubles are exactly equal (bit-for-bit)
  */
-#define FC_TEST_ASSERT_DOUBLE_EQ_EXACT(actual, expected) \
-    do { \
-        union { double d; uint64_t u; } _a, _e; \
-        _a.d = (actual); _e.d = (expected); \
-        if (_a.u != _e.u) { \
-            fc_test_assert_fail_double(#actual " == " #expected " (exact)", __FILE__, __LINE__, \
-                (actual), (expected)); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_DOUBLE_EQ_EXACT(actual, expected)                                           \
+    do {                                                                                           \
+        union {                                                                                    \
+            double d;                                                                              \
+            uint64_t u;                                                                            \
+        } _a, _e;                                                                                  \
+        _a.d = (actual);                                                                           \
+        _e.d = (expected);                                                                         \
+        if (_a.u != _e.u) {                                                                        \
+            fc_test_assert_fail_double(                                                            \
+                #actual " == " #expected " (exact)", __FILE__, __LINE__, (actual), (expected)      \
+            );                                                                                     \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
  * @brief Assert that pointer is NULL
  */
-#define FC_TEST_ASSERT_NULL(ptr) FC_TEST_ASSERT_EQ((intptr_t)(ptr), 0)
+#define FC_TEST_ASSERT_NULL(ptr) FC_TEST_ASSERT_EQ((intptr_t) (ptr), 0)
 
 /**
  * @brief Assert that pointer is not NULL
  */
-#define FC_TEST_ASSERT_NOT_NULL(ptr) FC_TEST_ASSERT_NE((intptr_t)(ptr), 0)
+#define FC_TEST_ASSERT_NOT_NULL(ptr) FC_TEST_ASSERT_NE((intptr_t) (ptr), 0)
 
 /**
  * @brief Assert that string equals expected value
  */
-#define FC_TEST_ASSERT_STR_EQ(actual, expected) \
-    do { \
-        if (strcmp((actual), (expected)) != 0) { \
-            fc_test_assert_fail_str(#actual " == " #expected, __FILE__, __LINE__, \
-                (actual), (expected)); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_STR_EQ(actual, expected)                                                    \
+    do {                                                                                           \
+        if (strcmp((actual), (expected)) != 0) {                                                   \
+            fc_test_assert_fail_str(                                                               \
+                #actual " == " #expected, __FILE__, __LINE__, (actual), (expected)                 \
+            );                                                                                     \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
  * @brief Assert that memory blocks are equal
  */
-#define FC_TEST_ASSERT_MEM_EQ(actual, expected, size) \
-    do { \
-        if (memcmp((actual), (expected), (size)) != 0) { \
-            fc_test_assert_fail_mem(#actual " == " #expected, __FILE__, __LINE__, \
-                (actual), (expected), (size)); \
-            return; \
-        } \
+#define FC_TEST_ASSERT_MEM_EQ(actual, expected, size)                                              \
+    do {                                                                                           \
+        if (memcmp((actual), (expected), (size)) != 0) {                                           \
+            fc_test_assert_fail_mem(                                                               \
+                #actual " == " #expected, __FILE__, __LINE__, (actual), (expected), (size)         \
+            );                                                                                     \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
 /**
  * @brief Mark test as skipped with message
  */
-#define FC_TEST_SKIP(msg, ...) \
-    do { \
-        char _buf[FC_TEST_MAX_MSG_LEN]; \
-        snprintf(_buf, sizeof(_buf), msg, ##__VA_ARGS__); \
-        fc_test_skip(_buf); \
-        return; \
+#define FC_TEST_SKIP(msg, ...)                                                                     \
+    do {                                                                                           \
+        char _buf[FC_TEST_MAX_MSG_LEN];                                                            \
+        snprintf(_buf, sizeof(_buf), msg, ##__VA_ARGS__);                                          \
+        fc_test_skip(_buf);                                                                        \
+        return;                                                                                    \
     } while (0)
 
 /**
  * @brief Unconditional test failure
  */
-#define FC_TEST_FAIL(msg, ...) \
-    do { \
-        char _buf[FC_TEST_MAX_MSG_LEN]; \
-        snprintf(_buf, sizeof(_buf), msg, ##__VA_ARGS__); \
-        fc_test_assert_fail("FC_TEST_FAIL", __FILE__, __LINE__, _buf); \
-        return; \
+#define FC_TEST_FAIL(msg, ...)                                                                     \
+    do {                                                                                           \
+        char _buf[FC_TEST_MAX_MSG_LEN];                                                            \
+        snprintf(_buf, sizeof(_buf), msg, ##__VA_ARGS__);                                          \
+        fc_test_assert_fail("FC_TEST_FAIL", __FILE__, __LINE__, _buf);                             \
+        return;                                                                                    \
     } while (0)
 
 /*
  * Internal assertion failure functions
-*/
+ */
 
 FC_BEGIN_DECLS
 
@@ -273,11 +286,7 @@ FC_API void fc_test_assert_fail_eq(
 /**
  * @brief Report inequality assertion failure
  */
-FC_API void fc_test_assert_fail_ne(
-    const char* condition,
-    const char* file,
-    int line
-);
+FC_API void fc_test_assert_fail_ne(const char* condition, const char* file, int line);
 
 /**
  * @brief Report double comparison failure
@@ -322,7 +331,7 @@ FC_END_DECLS
 
 /*
  * Test suite management
-*/
+ */
 
 /**
  * @brief Test suite structure
@@ -415,37 +424,36 @@ void fc_test_cleanup(void);
 
 /*
  * Test suite registration macros
-*/
+ */
 
 /**
  * @brief Define a test function
  */
-#define FC_TEST(suite_name, test_name) \
-    static void suite_name##_##test_name##_impl(void); \
-    static void suite_name##_##test_name##_wrapper(void) { \
-        fc_test_start(#suite_name "/" #test_name); \
-        suite_name##_##test_name##_impl(); \
-    } \
+#define FC_TEST(suite_name, test_name)                                                             \
+    static void suite_name##_##test_name##_impl(void);                                             \
+    static void suite_name##_##test_name##_wrapper(void) {                                         \
+        fc_test_start(#suite_name "/" #test_name);                                                 \
+        suite_name##_##test_name##_impl();                                                         \
+    }                                                                                              \
     static void suite_name##_##test_name##_impl(void)
 
 /**
  * @brief Declare a test suite
  */
-#define FC_TEST_SUITE(suite_name) \
-    static fc_test_fn suite_name##_tests[] =
+#define FC_TEST_SUITE(suite_name) static fc_test_fn suite_name##_tests[] =
 
 /**
  * @brief Register test suite and run it
  */
-#define FC_TEST_REGISTER_AND_RUN(suite) \
-    do { \
-        fc_test_register_suite(suite); \
-        fc_test_run_suite(#suite); \
+#define FC_TEST_REGISTER_AND_RUN(suite)                                                            \
+    do {                                                                                           \
+        fc_test_register_suite(suite);                                                             \
+        fc_test_run_suite(#suite);                                                                 \
     } while (0)
 
 /*
  * Internal test runner state
-*/
+ */
 
 FC_BEGIN_DECLS
 
@@ -478,7 +486,7 @@ FC_END_DECLS
 
 /*
  * Memory tracking utilities
-*/
+ */
 
 /**
  * @brief Enable memory leak detection
@@ -501,26 +509,26 @@ void fc_test_print_leak_report(void);
 
 /*
  * Convenience macros for simpler test syntax
-*/
+ */
 
 /**
  * @brief Define a simple test function
  */
-#define TEST(name) \
-    static void name##_impl(void); \
-    static void name(void) { \
-        fc_test_start(#name); \
-        name##_impl(); \
-        fc_test_end(); \
-    } \
+#define TEST(name)                                                                                 \
+    static void name##_impl(void);                                                                 \
+    static void name(void) {                                                                       \
+        fc_test_start(#name);                                                                      \
+        name##_impl();                                                                             \
+        fc_test_end();                                                                             \
+    }                                                                                              \
     static void name##_impl(void)
 
 /**
  * @brief Run a test function
  */
-#define RUN_TEST(test_func) \
-    do { \
-        test_func(); \
+#define RUN_TEST(test_func)                                                                        \
+    do {                                                                                           \
+        test_func();                                                                               \
     } while (0)
 
 /**

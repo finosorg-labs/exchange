@@ -3,13 +3,13 @@
  * @brief Benchmark for Kyle's Lambda computation
  */
 
-#include "signal/kyle_lambda.h"
 #include "bench_framework.h"
+#include "signal/kyle_lambda.h"
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 typedef struct {
     double* lambda_out;
@@ -41,16 +41,11 @@ typedef struct {
 } bench_kyle_lambda_ols_data_t;
 
 /* Test data generation */
-static void generate_test_data(
-    double* dprice,
-    double* volume,
-    size_t n_symbols,
-    size_t window
-) {
+static void generate_test_data(double* dprice, double* volume, size_t n_symbols, size_t window) {
     for (size_t i = 0; i < n_symbols; i++) {
         for (size_t j = 0; j < window; j++) {
-            size_t idx = i * window + j;
-            double t = (double)j / (double)window;
+            size_t idx  = i * window + j;
+            double t    = (double) j / (double) window;
             dprice[idx] = sin(t * 6.28318 + i * 0.1) * 0.01;
             volume[idx] = 1000.0 + 500.0 * cos(t * 3.14159 + i * 0.2) + 100.0 * dprice[idx];
         }
@@ -58,18 +53,14 @@ static void generate_test_data(
 }
 
 static void bench_kyle_lambda_fn(void* user_data) {
-    bench_kyle_lambda_data_t* data = (bench_kyle_lambda_data_t*)user_data;
+    bench_kyle_lambda_data_t* data = (bench_kyle_lambda_data_t*) user_data;
     fc_ex_sig_kyle_lambda_batch(
-        data->lambda_out,
-        data->dprice,
-        data->volume,
-        data->n_symbols,
-        data->window
+        data->lambda_out, data->dprice, data->volume, data->n_symbols, data->window
     );
 }
 
 static void bench_kyle_lambda_ext_fn(void* user_data) {
-    bench_kyle_lambda_ext_data_t* data = (bench_kyle_lambda_ext_data_t*)user_data;
+    bench_kyle_lambda_ext_data_t* data = (bench_kyle_lambda_ext_data_t*) user_data;
     fc_ex_sig_kyle_lambda_batch_ext(
         data->lambda_out,
         data->valid_flags,
@@ -83,7 +74,7 @@ static void bench_kyle_lambda_ext_fn(void* user_data) {
 }
 
 static void bench_kyle_lambda_ols_fn(void* user_data) {
-    bench_kyle_lambda_ols_data_t* data = (bench_kyle_lambda_ols_data_t*)user_data;
+    bench_kyle_lambda_ols_data_t* data = (bench_kyle_lambda_ols_data_t*) user_data;
     fc_ex_sig_kyle_lambda_ols(
         data->lambda_out,
         data->r_squared,
@@ -112,17 +103,17 @@ static void bench_kyle_lambda_batch_impl(size_t n_symbols, size_t window, const 
 
     bench_kyle_lambda_data_t data = {
         .lambda_out = lambda,
-        .dprice = dprice,
-        .volume = volume,
-        .n_symbols = n_symbols,
-        .window = window
+        .dprice     = dprice,
+        .volume     = volume,
+        .n_symbols  = n_symbols,
+        .window     = window
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = total_elements * sizeof(double) * 2;
-    config.min_iterations = 100;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = total_elements * sizeof(double) * 2;
+    config.min_iterations    = 100;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_kyle_lambda_fn, &data, &result);
@@ -139,9 +130,9 @@ static void bench_kyle_lambda_ext_impl(size_t n_symbols, size_t window, const ch
     double* dprice = aligned_alloc(64, total_elements * sizeof(double));
     double* volume = aligned_alloc(64, total_elements * sizeof(double));
     double* lambda = aligned_alloc(64, n_symbols * sizeof(double));
-    bool* valid = aligned_alloc(64, n_symbols * sizeof(bool));
+    bool* valid    = aligned_alloc(64, n_symbols * sizeof(bool));
 
-    size_t ws_size = fc_ex_sig_kyle_lambda_workspace_size(window);
+    size_t ws_size    = fc_ex_sig_kyle_lambda_workspace_size(window);
     double* workspace = aligned_alloc(64, ws_size);
 
     if (!dprice || !volume || !lambda || !valid || !workspace) {
@@ -152,21 +143,21 @@ static void bench_kyle_lambda_ext_impl(size_t n_symbols, size_t window, const ch
     generate_test_data(dprice, volume, n_symbols, window);
 
     bench_kyle_lambda_ext_data_t data = {
-        .lambda_out = lambda,
-        .valid_flags = valid,
-        .dprice = dprice,
-        .volume = volume,
-        .workspace = workspace,
+        .lambda_out     = lambda,
+        .valid_flags    = valid,
+        .dprice         = dprice,
+        .volume         = volume,
+        .workspace      = workspace,
         .workspace_size = ws_size,
-        .n_symbols = n_symbols,
-        .window = window
+        .n_symbols      = n_symbols,
+        .window         = window
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = total_elements * sizeof(double) * 2;
-    config.min_iterations = 100;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = total_elements * sizeof(double) * 2;
+    config.min_iterations    = 100;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_kyle_lambda_ext_fn, &data, &result);
@@ -182,9 +173,9 @@ static void bench_kyle_lambda_ext_impl(size_t n_symbols, size_t window, const ch
 static void bench_kyle_lambda_ols_impl(size_t n_symbols, size_t window, const char* name) {
     const size_t total_elements = n_symbols * window;
 
-    double* dprice = aligned_alloc(64, total_elements * sizeof(double));
-    double* volume = aligned_alloc(64, total_elements * sizeof(double));
-    double* lambda = aligned_alloc(64, n_symbols * sizeof(double));
+    double* dprice    = aligned_alloc(64, total_elements * sizeof(double));
+    double* volume    = aligned_alloc(64, total_elements * sizeof(double));
+    double* lambda    = aligned_alloc(64, n_symbols * sizeof(double));
     double* r_squared = aligned_alloc(64, n_symbols * sizeof(double));
     double* std_error = aligned_alloc(64, n_symbols * sizeof(double));
 
@@ -197,19 +188,19 @@ static void bench_kyle_lambda_ols_impl(size_t n_symbols, size_t window, const ch
 
     bench_kyle_lambda_ols_data_t data = {
         .lambda_out = lambda,
-        .r_squared = r_squared,
-        .std_error = std_error,
-        .dprice = dprice,
-        .volume = volume,
-        .n_symbols = n_symbols,
-        .window = window
+        .r_squared  = r_squared,
+        .std_error  = std_error,
+        .dprice     = dprice,
+        .volume     = volume,
+        .n_symbols  = n_symbols,
+        .window     = window
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = total_elements * sizeof(double) * 2;
-    config.min_iterations = 50;  /* Fewer iterations for slower OLS */
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = total_elements * sizeof(double) * 2;
+    config.min_iterations    = 50; /* Fewer iterations for slower OLS */
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_kyle_lambda_ols_fn, &data, &result);

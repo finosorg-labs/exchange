@@ -4,30 +4,30 @@
  */
 
 #include "test_framework.h"
+#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <dlfcn.h>
 
 /*
  * Global state
-*/
+ */
 
-static fc_test_stats_t g_stats = {0};
-static const char* g_current_test = NULL;
+static fc_test_stats_t g_stats           = {0};
+static const char* g_current_test        = NULL;
 static fc_test_result_t g_current_result = FC_TEST_PASSED;
-static int g_verbose = 1;
-static int g_coverage_enabled = 0;
-static const char* g_filter_pattern = NULL;
-static clock_t g_test_start_time = 0;
+static int g_verbose                     = 1;
+static int g_coverage_enabled            = 0;
+static const char* g_filter_pattern      = NULL;
+static clock_t g_test_start_time         = 0;
 
 static const fc_test_suite_t* g_suites[FC_TEST_MAX_SUITES];
 static int g_num_suites = 0;
 
 /*
  * Test statistics implementation
-*/
+ */
 
 void fc_test_stats_init(fc_test_stats_t* stats) {
     memset(stats, 0, sizeof(*stats));
@@ -38,15 +38,19 @@ void fc_test_stats_print(const fc_test_stats_t* stats) {
 
     if (g_coverage_enabled) {
         printf("PASS\n");
-        printf("coverage: %.1f%% of statements\n",
-               stats->total_tests > 0 ? (double)stats->passed / stats->total_tests * 100.0 : 0.0);
+        printf(
+            "coverage: %.1f%% of statements\n",
+            stats->total_tests > 0 ? (double) stats->passed / stats->total_tests * 100.0 : 0.0
+        );
     }
 
-    printf("Test Results: %d tests, %d passed, %d failed, %d skipped\n",
-           stats->total_tests,
-           stats->passed,
-           stats->failed,
-           stats->skipped);
+    printf(
+        "Test Results: %d tests, %d passed, %d failed, %d skipped\n",
+        stats->total_tests,
+        stats->passed,
+        stats->failed,
+        stats->skipped
+    );
     printf("Time: %.2f ms\n", stats->elapsed_time_ms);
     printf("============================================================\n");
 
@@ -59,14 +63,9 @@ void fc_test_stats_print(const fc_test_stats_t* stats) {
 
 /*
  * Assertion failure implementations
-*/
+ */
 
-void fc_test_assert_fail(
-    const char* condition,
-    const char* file,
-    int line,
-    const char* message
-) {
+void fc_test_assert_fail(const char* condition, const char* file, int line, const char* message) {
     printf("FAIL: %s\n", g_current_test ? g_current_test : "unknown");
     printf("  Location: %s:%d\n", file, line);
     printf("  Condition: %s\n", condition);
@@ -91,11 +90,7 @@ void fc_test_assert_fail_eq(
     g_current_result = FC_TEST_FAILED;
 }
 
-void fc_test_assert_fail_ne(
-    const char* condition,
-    const char* file,
-    int line
-) {
+void fc_test_assert_fail_ne(const char* condition, const char* file, int line) {
     printf("FAIL: %s\n", g_current_test ? g_current_test : "unknown");
     printf("  Location: %s:%d\n", file, line);
     printf("  Condition: %s (should NOT be equal)\n", condition);
@@ -141,8 +136,8 @@ void fc_test_assert_fail_mem(
     const void* expected,
     size_t size
 ) {
-    (void)actual;
-    (void)expected;
+    (void) actual;
+    (void) expected;
     printf("FAIL: %s\n", g_current_test ? g_current_test : "unknown");
     printf("  Location: %s:%d\n", file, line);
     printf("  Condition: %s\n", condition);
@@ -157,11 +152,11 @@ void fc_test_skip(const char* message) {
 
 /*
  * Test runner implementation
-*/
+ */
 
 void fc_test_start(const char* test_name) {
-    g_current_test = test_name;
-    g_current_result = FC_TEST_PASSED;
+    g_current_test    = test_name;
+    g_current_result  = FC_TEST_PASSED;
     g_test_start_time = clock();
 
     if (g_verbose) {
@@ -171,23 +166,23 @@ void fc_test_start(const char* test_name) {
 
 void fc_test_end(void) {
     clock_t end_time = clock();
-    double elapsed = (double)(end_time - g_test_start_time) * 1000.0 / CLOCKS_PER_SEC;
+    double elapsed   = (double) (end_time - g_test_start_time) * 1000.0 / CLOCKS_PER_SEC;
 
     g_stats.total_tests++;
 
     switch (g_current_result) {
-        case FC_TEST_PASSED:
-            g_stats.passed++;
-            if (g_verbose) {
-                printf("PASS: %s (%.2f ms)\n", g_current_test, elapsed);
-            }
-            break;
-        case FC_TEST_FAILED:
-            g_stats.failed++;
-            break;
-        case FC_TEST_SKIPPED:
-            g_stats.skipped++;
-            break;
+    case FC_TEST_PASSED:
+        g_stats.passed++;
+        if (g_verbose) {
+            printf("PASS: %s (%.2f ms)\n", g_current_test, elapsed);
+        }
+        break;
+    case FC_TEST_FAILED:
+        g_stats.failed++;
+        break;
+    case FC_TEST_SKIPPED:
+        g_stats.skipped++;
+        break;
     }
 
     g_current_test = NULL;
@@ -203,7 +198,7 @@ void fc_test_set_result(fc_test_result_t result) {
 
 double fc_test_get_elapsed_ms(void) {
     clock_t now = clock();
-    return (double)(now - g_test_start_time) * 1000.0 / CLOCKS_PER_SEC;
+    return (double) (now - g_test_start_time) * 1000.0 / CLOCKS_PER_SEC;
 }
 
 void fc_test_set_verbose(int verbose) {
@@ -255,12 +250,11 @@ void fc_test_init_with_args(int argc, char** argv) {
 
 /*
  * Test suite management
-*/
+ */
 
 void fc_test_register_suite(const fc_test_suite_t* suite) {
     if (g_num_suites >= FC_TEST_MAX_SUITES) {
-        fprintf(stderr, "Error: Maximum number of test suites (%d) exceeded\n",
-                FC_TEST_MAX_SUITES);
+        fprintf(stderr, "Error: Maximum number of test suites (%d) exceeded\n", FC_TEST_MAX_SUITES);
         return;
     }
     g_suites[g_num_suites++] = suite;
@@ -290,8 +284,8 @@ int fc_test_run_all(void) {
         }
     }
 
-    clock_t total_end = clock();
-    g_stats.elapsed_time_ms = (double)(total_end - total_start) * 1000.0 / CLOCKS_PER_SEC;
+    clock_t total_end       = clock();
+    g_stats.elapsed_time_ms = (double) (total_end - total_start) * 1000.0 / CLOCKS_PER_SEC;
 
     printf("\n");
     fc_test_stats_print(&g_stats);
@@ -340,7 +334,7 @@ void fc_test_cleanup(void) {
 
 /*
  * Coverage reporting
-*/
+ */
 
 int fc_test_generate_coverage_report(void) {
     if (!g_coverage_enabled) {
@@ -354,7 +348,7 @@ int fc_test_generate_coverage_report(void) {
     /* Flush coverage data - use dlsym to avoid link errors when not compiled with coverage */
     typedef void (*gcov_flush_fn)(void);
     union {
-        void *obj;
+        void* obj;
         gcov_flush_fn fn;
     } flush_ptr;
     flush_ptr.obj = dlsym(RTLD_DEFAULT, "__gcov_flush");
@@ -378,7 +372,7 @@ int fc_test_generate_coverage_report(void) {
 
 /*
  * Memory tracking (stub implementation)
-*/
+ */
 
 void fc_test_enable_leak_detection(void) {
 }

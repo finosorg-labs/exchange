@@ -3,23 +3,30 @@
  * @brief Unit tests for realtime market indicators
  */
 
-#include "test_framework.h"
-#include "market_indicators.h"
 #include "error.h"
+#include "market_indicators.h"
 #include "simd_detect.h"
-#include <math.h>
+#include "test_framework.h"
 #include <float.h>
+#include <math.h>
 
-#define EPSILON 1e-10
+#define EPSILON   1e-10
 #define SECOND_NS 1000000000LL
 
-static fc_market_trade_t trade(uint32_t symbol, double price, double volume, double buy, double sell, int64_t ts) {
+static fc_market_trade_t trade(
+    uint32_t symbol,
+    double price,
+    double volume,
+    double buy,
+    double sell,
+    int64_t ts
+) {
     fc_market_trade_t t = {
-        .symbol_id = symbol,
-        .price = price,
-        .volume = volume,
-        .buy_volume = buy,
-        .sell_volume = sell,
+        .symbol_id    = symbol,
+        .price        = price,
+        .volume       = volume,
+        .buy_volume   = buy,
+        .sell_volume  = sell,
         .timestamp_ns = ts,
     };
     return t;
@@ -31,9 +38,14 @@ TEST(test_market_indicators_create_destroy) {
     FC_TEST_ASSERT_NOT_NULL(ctx);
     fc_market_indicators_destroy(ctx);
 
-    FC_TEST_ASSERT_NULL(fc_market_indicators_create(0, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_KAHAN));
+    FC_TEST_ASSERT_NULL(
+        fc_market_indicators_create(0, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_KAHAN)
+    );
     FC_TEST_ASSERT_NULL(fc_market_indicators_create(10, 0, FC_MARKET_INDICATORS_PRECISION_KAHAN));
-    FC_TEST_ASSERT_NULL(fc_market_indicators_create(10, 60 * SECOND_NS, 99));
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    FC_TEST_ASSERT_NULL(
+        fc_market_indicators_create(10, 60 * SECOND_NS, (fc_market_indicators_precision_mode_t) 99)
+    );
 }
 
 TEST(test_market_indicators_single_trade) {
@@ -76,9 +88,9 @@ TEST(test_market_indicators_multiple_trades) {
     FC_TEST_ASSERT_DOUBLE_EQ(out.twap, (100.0 * 10.0 + 110.0 * 20.0) / 30.0, EPSILON);
     FC_TEST_ASSERT_DOUBLE_EQ(out.buy_sell_pressure_ratio, 25.0 / 15.0, EPSILON);
 
-    double r1 = log(110.0 / 100.0);
-    double r2 = log(121.0 / 110.0);
-    double mean = (r1 + r2) / 2.0;
+    double r1           = log(110.0 / 100.0);
+    double r2           = log(121.0 / 110.0);
+    double mean         = (r1 + r2) / 2.0;
     double expected_vol = sqrt(((r1 - mean) * (r1 - mean) + (r2 - mean) * (r2 - mean)) / 2.0);
     FC_TEST_ASSERT_DOUBLE_EQ(out.volatility, expected_vol, 1e-8);
 
@@ -133,7 +145,7 @@ TEST(test_market_indicators_window_rollover) {
     FC_TEST_ASSERT_NOT_NULL(ctx);
 
     fc_market_trade_t first = trade(0, 100.0, 10.0, 5.0, 5.0, SECOND_NS);
-    fc_market_trade_t next = trade(0, 200.0, 2.0, 2.0, 0.0, 12 * SECOND_NS);
+    fc_market_trade_t next  = trade(0, 200.0, 2.0, 2.0, 0.0, 12 * SECOND_NS);
     ASSERT_EQ(fc_market_indicators_update(ctx, &first), FC_OK);
     ASSERT_EQ(fc_market_indicators_update(ctx, &next), FC_OK);
 
@@ -151,10 +163,10 @@ TEST(test_market_indicators_validation) {
         fc_market_indicators_create(1, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_KAHAN);
     FC_TEST_ASSERT_NOT_NULL(ctx);
 
-    fc_market_trade_t valid = trade(0, 100.0, 10.0, 5.0, 5.0, SECOND_NS);
+    fc_market_trade_t valid      = trade(0, 100.0, 10.0, 5.0, 5.0, SECOND_NS);
     fc_market_trade_t bad_symbol = trade(2, 100.0, 10.0, 5.0, 5.0, SECOND_NS);
-    fc_market_trade_t nan_price = trade(0, NAN, 10.0, 5.0, 5.0, SECOND_NS);
-    fc_market_trade_t inf_price = trade(0, INFINITY, 10.0, 5.0, 5.0, SECOND_NS);
+    fc_market_trade_t nan_price  = trade(0, NAN, 10.0, 5.0, 5.0, SECOND_NS);
+    fc_market_trade_t inf_price  = trade(0, INFINITY, 10.0, 5.0, 5.0, SECOND_NS);
     fc_market_trade_t neg_volume = trade(0, 100.0, -1.0, 0.0, 0.0, SECOND_NS);
     fc_market_trade_t zero_price = trade(0, 0.0, 1.0, 0.0, 0.0, SECOND_NS);
 
@@ -229,61 +241,67 @@ TEST(test_market_indicators_reset) {
 #if FC_ARCH_X86_64
 TEST(test_market_indicators_batch_parity_simd_vs_scalar) {
     const uint32_t num_symbols = 64;
-    const size_t num_trades = 10000;
+    const size_t num_trades    = 10000;
 
-    fc_market_indicators_ctx_t* ctx =
-        fc_market_indicators_create(num_symbols, 60 * SECOND_NS,
-                                    FC_MARKET_INDICATORS_PRECISION_STANDARD);
+    fc_market_indicators_ctx_t* ctx = fc_market_indicators_create(
+        num_symbols, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_STANDARD
+    );
     FC_TEST_ASSERT_NOT_NULL(ctx);
 
-    fc_market_trade_t* trades =
-        (fc_market_trade_t*)malloc(num_trades * sizeof(fc_market_trade_t));
+    fc_market_trade_t* trades = (fc_market_trade_t*) malloc(num_trades * sizeof(fc_market_trade_t));
     FC_TEST_ASSERT_NOT_NULL(trades);
     srand(42);
     for (size_t i = 0; i < num_trades; i++) {
-        double vol = 100.0 + (double)(rand() % 10000);
-        double buy = vol * (double)(rand() % 100) / 100.0;
-        trades[i].symbol_id = (uint32_t)(i % num_symbols);
-        trades[i].price = 100.0 + (double)(rand() % 10000) / 100.0;
-        trades[i].volume = vol;
-        trades[i].buy_volume = buy;
-        trades[i].sell_volume = vol - buy;
-        trades[i].timestamp_ns = SECOND_NS + (int64_t)i * 1000000LL;
+        double vol             = 100.0 + (double) (rand() % 10000);
+        double buy             = vol * (double) (rand() % 100) / 100.0;
+        trades[i].symbol_id    = (uint32_t) (i % num_symbols);
+        trades[i].price        = 100.0 + (double) (rand() % 10000) / 100.0;
+        trades[i].volume       = vol;
+        trades[i].buy_volume   = buy;
+        trades[i].sell_volume  = vol - buy;
+        trades[i].timestamp_ns = SECOND_NS + (int64_t) i * 1000000LL;
     }
 
     ASSERT_EQ(fc_market_indicators_update_batch(ctx, trades, num_trades), FC_OK);
 
     fc_market_indicators_t* simd_results =
-        (fc_market_indicators_t*)malloc(num_symbols * sizeof(fc_market_indicators_t));
+        (fc_market_indicators_t*) malloc(num_symbols * sizeof(fc_market_indicators_t));
     FC_TEST_ASSERT_NOT_NULL(simd_results);
     ASSERT_EQ(fc_market_indicators_get_all(ctx, simd_results), FC_OK);
 
     ASSERT_EQ(fc_market_indicators_reset_all(ctx), FC_OK);
 
     fc_simd_level_t saved_level = g_fc_simd_level;
-    g_fc_simd_level = FC_SIMD_SCALAR;
+    g_fc_simd_level             = FC_SIMD_SCALAR;
 
     ASSERT_EQ(fc_market_indicators_update_batch(ctx, trades, num_trades), FC_OK);
 
     g_fc_simd_level = saved_level;
 
     fc_market_indicators_t* scalar_results =
-        (fc_market_indicators_t*)malloc(num_symbols * sizeof(fc_market_indicators_t));
+        (fc_market_indicators_t*) malloc(num_symbols * sizeof(fc_market_indicators_t));
     FC_TEST_ASSERT_NOT_NULL(scalar_results);
     ASSERT_EQ(fc_market_indicators_get_all(ctx, scalar_results), FC_OK);
 
     for (uint32_t i = 0; i < num_symbols; i++) {
-        if (!simd_results[i].initialized && !scalar_results[i].initialized) continue;
+        if (!simd_results[i].initialized && !scalar_results[i].initialized)
+            continue;
         ASSERT_EQ(simd_results[i].initialized, scalar_results[i].initialized);
         FC_TEST_ASSERT_DOUBLE_EQ(simd_results[i].vwap, scalar_results[i].vwap, 1e-12);
         FC_TEST_ASSERT_DOUBLE_EQ(simd_results[i].twap, scalar_results[i].twap, 1e-12);
         FC_TEST_ASSERT_DOUBLE_EQ(simd_results[i].volatility, scalar_results[i].volatility, 1e-12);
         FC_TEST_ASSERT_DOUBLE_EQ(
             simd_results[i].buy_sell_pressure_ratio,
-            scalar_results[i].buy_sell_pressure_ratio, 1e-12);
+            scalar_results[i].buy_sell_pressure_ratio,
+            1e-12
+        );
         ASSERT_EQ(simd_results[i].trade_count, scalar_results[i].trade_count);
-        FC_TEST_ASSERT_DOUBLE_EQ(simd_results[i].total_volume, scalar_results[i].total_volume, 1e-12);
-        FC_TEST_ASSERT_DOUBLE_EQ(simd_results[i].total_amount, scalar_results[i].total_amount, 1e-12);
+        FC_TEST_ASSERT_DOUBLE_EQ(
+            simd_results[i].total_volume, scalar_results[i].total_volume, 1e-12
+        );
+        FC_TEST_ASSERT_DOUBLE_EQ(
+            simd_results[i].total_amount, scalar_results[i].total_amount, 1e-12
+        );
     }
 
     free(scalar_results);
@@ -295,18 +313,17 @@ TEST(test_market_indicators_batch_parity_simd_vs_scalar) {
 
 TEST(test_market_indicators_batch_nan_mid) {
     const size_t num_trades = 200;
-    const size_t fail_idx = 137;
+    const size_t fail_idx   = 137;
 
     fc_market_indicators_ctx_t* ctx =
         fc_market_indicators_create(1, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_KAHAN);
     FC_TEST_ASSERT_NOT_NULL(ctx);
 
-    fc_market_trade_t* trades =
-        (fc_market_trade_t*)malloc(num_trades * sizeof(fc_market_trade_t));
+    fc_market_trade_t* trades = (fc_market_trade_t*) malloc(num_trades * sizeof(fc_market_trade_t));
     FC_TEST_ASSERT_NOT_NULL(trades);
     for (size_t i = 0; i < num_trades; i++) {
-        trades[i] = trade(0, 100.0 + (double)i, 10.0, 5.0, 5.0,
-                          SECOND_NS + (int64_t)i * 1000000LL);
+        trades[i] =
+            trade(0, 100.0 + (double) i, 10.0, 5.0, 5.0, SECOND_NS + (int64_t) i * 1000000LL);
     }
     trades[fail_idx].price = NAN;
 
@@ -336,18 +353,23 @@ TEST(test_market_indicators_batch_nan_mid) {
 
 TEST(test_market_indicators_batch_bad_symbol_mid) {
     const size_t num_trades = 500;
-    const size_t fail_idx = 411;
+    const size_t fail_idx   = 411;
 
     fc_market_indicators_ctx_t* ctx =
         fc_market_indicators_create(2, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_KAHAN);
     FC_TEST_ASSERT_NOT_NULL(ctx);
 
-    fc_market_trade_t* trades =
-        (fc_market_trade_t*)malloc(num_trades * sizeof(fc_market_trade_t));
+    fc_market_trade_t* trades = (fc_market_trade_t*) malloc(num_trades * sizeof(fc_market_trade_t));
     FC_TEST_ASSERT_NOT_NULL(trades);
     for (size_t i = 0; i < num_trades; i++) {
-        trades[i] = trade((uint32_t)(i % 2), 100.0 + (double)i, 10.0, 5.0, 5.0,
-                          SECOND_NS + (int64_t)i * 1000000LL);
+        trades[i] = trade(
+            (uint32_t) (i % 2),
+            100.0 + (double) i,
+            10.0,
+            5.0,
+            5.0,
+            SECOND_NS + (int64_t) i * 1000000LL
+        );
     }
     trades[fail_idx].symbol_id = 99;
 
@@ -407,12 +429,11 @@ TEST(test_market_indicators_bigfloat_batch) {
         fc_market_indicators_create(1, 60 * SECOND_NS, FC_MARKET_INDICATORS_PRECISION_BIGFLOAT);
     FC_TEST_ASSERT_NOT_NULL(ctx);
 
-    fc_market_trade_t* trades =
-        (fc_market_trade_t*)malloc(num_trades * sizeof(fc_market_trade_t));
+    fc_market_trade_t* trades = (fc_market_trade_t*) malloc(num_trades * sizeof(fc_market_trade_t));
     FC_TEST_ASSERT_NOT_NULL(trades);
     for (size_t i = 0; i < num_trades; i++) {
-        trades[i] = trade(0, 100.0 + (double)i, 10.0, 5.0, 5.0,
-                          SECOND_NS + (int64_t)i * 1000000LL);
+        trades[i] =
+            trade(0, 100.0 + (double) i, 10.0, 5.0, 5.0, SECOND_NS + (int64_t) i * 1000000LL);
     }
 
     ASSERT_EQ(fc_market_indicators_update_batch(ctx, trades, num_trades), FC_OK);
@@ -441,7 +462,7 @@ TEST(test_market_indicators_bigfloat_batch) {
 }
 
 TEST(test_market_indicators_batch_edge_sizes) {
-    const size_t sizes[] = {0, 1, 15, 16, 100, 4096, 4097};
+    const size_t sizes[]   = {0, 1, 15, 16, 100, 4096, 4097};
     const size_t num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
     for (size_t s = 0; s < num_sizes; s++) {
@@ -453,19 +474,39 @@ TEST(test_market_indicators_batch_edge_sizes) {
 
         fc_market_trade_t* trades = NULL;
         if (n > 0) {
-            trades = (fc_market_trade_t*)malloc(n * sizeof(fc_market_trade_t));
-            FC_TEST_ASSERT_NOT_NULL(trades);
+            trades = (fc_market_trade_t*) malloc(n * sizeof(fc_market_trade_t));
+            if (!trades) {
+                fc_market_indicators_destroy(ctx);
+                FC_TEST_ASSERT_NOT_NULL(NULL);
+            }
             for (size_t i = 0; i < n; i++) {
-                trades[i] = trade((uint32_t)(i % 2), 100.0 + (double)i, 10.0, 5.0, 5.0,
-                                  SECOND_NS + (int64_t)i * 1000000LL);
+                trades[i] = trade(
+                    (uint32_t) (i % 2),
+                    100.0 + (double) i,
+                    10.0,
+                    5.0,
+                    5.0,
+                    SECOND_NS + (int64_t) i * 1000000LL
+                );
             }
         }
 
-        ASSERT_EQ(fc_market_indicators_update_batch(ctx, trades, n), FC_OK);
+        fc_status_t status = fc_market_indicators_update_batch(ctx, trades, n);
+        if (status != FC_OK) {
+            free(trades);
+            fc_market_indicators_destroy(ctx);
+            ASSERT_EQ(status, FC_OK);
+        }
 
         fc_market_indicators_t out;
-        ASSERT_EQ(fc_market_indicators_get(ctx, 0, &out), FC_OK);
+        status = fc_market_indicators_get(ctx, 0, &out);
+        if (status != FC_OK) {
+            free(trades);
+            fc_market_indicators_destroy(ctx);
+            ASSERT_EQ(status, FC_OK);
+        }
         if (n > 0) {
+            // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
             ASSERT_TRUE(out.initialized);
             ASSERT_EQ(out.trade_count, (n + 1) >> 1);
         } else {

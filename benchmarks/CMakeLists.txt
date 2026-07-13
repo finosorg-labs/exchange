@@ -49,6 +49,7 @@ add_executable(exchange_benchmarks
     bench_latency_arb.c
     bench_index_rebal.c
     bench_delta_hedge.c
+    bench_marginal_var.c
 )
 
 # Link with benchmark framework and exchange library

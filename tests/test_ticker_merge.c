@@ -3,16 +3,16 @@
  * @brief Tests for K-line merging functionality
  */
 
+#include "error.h"
 #include "test_framework.h"
 #include "ticker_merge.h"
-#include "error.h"
 #include <math.h>
 #include <stdio.h>
 
 #define EPSILON 1e-9
 
-static int callback_invoked = 0;
-static uint32_t callback_symbol_id = 0;
+static int callback_invoked         = 0;
+static uint32_t callback_symbol_id  = 0;
 static uint32_t callback_period_idx = 0;
 static fc_ohlcv_t callback_ohlcv;
 
@@ -31,7 +31,9 @@ static void test_callback(
 
 TEST(test_ticker_merge_create_destroy) {
     int64_t base_period        = 60000000000LL; // 1 min
-    int64_t derived_periods[3] = {300000000000LL, 900000000000LL, 3600000000000LL}; // 5min, 15min, 60min
+    int64_t derived_periods[3] = {
+        300000000000LL, 900000000000LL, 3600000000000LL
+    }; // 5min, 15min, 60min
 
     fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
         10, base_period, derived_periods, 3, FC_TICKER_PRECISION_STANDARD, NULL, NULL
@@ -56,17 +58,23 @@ TEST(test_ticker_merge_invalid_args) {
     int64_t base_period        = 60000000000LL;
     int64_t derived_periods[1] = {300000000000LL};
 
-    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(0, base_period, derived_periods, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
+    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
+        0, base_period, derived_periods, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL
+    );
     ASSERT_NULL(ctx);
 
-    ctx = fc_ticker_merge_create(10, 0, derived_periods, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
+    ctx =
+        fc_ticker_merge_create(10, 0, derived_periods, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
     ASSERT_NULL(ctx);
 
-    ctx = fc_ticker_merge_create(10, base_period, NULL, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
+    ctx =
+        fc_ticker_merge_create(10, base_period, NULL, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
     ASSERT_NULL(ctx);
 
     int64_t bad_derived[1] = {100000000000LL}; // Not a multiple of base_period
-    ctx = fc_ticker_merge_create(10, base_period, bad_derived, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
+    ctx                    = fc_ticker_merge_create(
+        10, base_period, bad_derived, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL
+    );
     ASSERT_NULL(ctx);
 }
 
@@ -100,7 +108,7 @@ TEST(test_ticker_merge_base_period_only) {
 }
 
 TEST(test_ticker_merge_5min_from_1min) {
-    int64_t base_period        = 60000000000LL;  // 1 min
+    int64_t base_period        = 60000000000LL;    // 1 min
     int64_t derived_periods[1] = {300000000000LL}; // 5 min
 
     callback_invoked = 0;
@@ -130,18 +138,18 @@ TEST(test_ticker_merge_5min_from_1min) {
     ASSERT_EQ(callback_period_idx, 0);
 
     // Check merged K-line
-    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.open, 100.0, EPSILON);   // First bar's open
-    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.close, 104.0, EPSILON);  // Last bar's close
-    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.high, 104.0, EPSILON);   // Max high
-    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.low, 100.0, EPSILON);    // Min low
-    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.volume, 50.0, EPSILON);  // Sum of volumes
-    ASSERT_EQ(callback_ohlcv.tick_count, 5);        // Sum of tick counts
+    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.open, 100.0, EPSILON);  // First bar's open
+    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.close, 104.0, EPSILON); // Last bar's close
+    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.high, 104.0, EPSILON);  // Max high
+    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.low, 100.0, EPSILON);   // Min low
+    FC_TEST_ASSERT_DOUBLE_EQ(callback_ohlcv.volume, 50.0, EPSILON); // Sum of volumes
+    ASSERT_EQ(callback_ohlcv.tick_count, 5);                        // Sum of tick counts
 
     fc_ticker_merge_destroy(ctx);
 }
 
 TEST(test_ticker_merge_multiple_periods) {
-    int64_t base_period        = 60000000000LL;                                // 1 min
+    int64_t base_period        = 60000000000LL;                    // 1 min
     int64_t derived_periods[2] = {300000000000LL, 900000000000LL}; // 5min, 15min
 
     callback_invoked = 0;
@@ -275,9 +283,8 @@ TEST(test_ticker_merge_bigfloat_precision) {
 TEST(test_ticker_merge_kahan_precision) {
     int64_t base_period = 60000000000LL;
 
-    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-        1, base_period, NULL, 0, FC_TICKER_PRECISION_KAHAN, NULL, NULL
-    );
+    fc_ticker_merge_ctx_t* ctx =
+        fc_ticker_merge_create(1, base_period, NULL, 0, FC_TICKER_PRECISION_KAHAN, NULL, NULL);
     ASSERT_NOT_NULL(ctx);
 
     // Send many small ticks to test Kahan summation
@@ -411,9 +418,8 @@ TEST(test_ticker_merge_reset_all) {
 TEST(test_ticker_merge_invalid_tick_data) {
     int64_t base_period = 60000000000LL;
 
-    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-        1, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL
-    );
+    fc_ticker_merge_ctx_t* ctx =
+        fc_ticker_merge_create(1, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
     ASSERT_NOT_NULL(ctx);
 
     // Test NaN price
@@ -475,9 +481,8 @@ TEST(test_ticker_merge_batch_update) {
 TEST(test_ticker_merge_get_stats_null_outputs) {
     int64_t base_period = 60000000000LL;
 
-    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-        5, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL
-    );
+    fc_ticker_merge_ctx_t* ctx =
+        fc_ticker_merge_create(5, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
     ASSERT_NOT_NULL(ctx);
 
     // Test with NULL outputs (should not crash)
@@ -490,9 +495,8 @@ TEST(test_ticker_merge_get_stats_null_outputs) {
 TEST(test_ticker_merge_error_handling) {
     int64_t base_period = 60000000000LL;
 
-    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-        1, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL
-    );
+    fc_ticker_merge_ctx_t* ctx =
+        fc_ticker_merge_create(1, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
     ASSERT_NOT_NULL(ctx);
 
     fc_ohlcv_t ohlcv;
@@ -562,9 +566,8 @@ TEST(test_ticker_merge_derived_period_error_handling) {
 TEST(test_ticker_merge_high_low_tracking) {
     int64_t base_period = 60000000000LL;
 
-    fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-        1, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL
-    );
+    fc_ticker_merge_ctx_t* ctx =
+        fc_ticker_merge_create(1, base_period, NULL, 0, FC_TICKER_PRECISION_STANDARD, NULL, NULL);
     ASSERT_NOT_NULL(ctx);
 
     // Send ticks with varying prices in same period
@@ -596,7 +599,7 @@ TEST(test_ticker_merge_high_low_tracking) {
 TEST(test_ticker_merge_price_fluctuation) {
     // Test case to cover line 79: out->low = bars[i].low
     // Create scenario where later bars have lower prices than first bar
-    int64_t derived_periods[] = {300000000000LL}; // 5 minutes in nanoseconds
+    int64_t derived_periods[]  = {300000000000LL}; // 5 minutes in nanoseconds
     fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
         1, 60000000000LL, derived_periods, 1, FC_TICKER_PRECISION_STANDARD, NULL, NULL
     );
@@ -607,11 +610,11 @@ TEST(test_ticker_merge_price_fluctuation) {
 
     for (int i = 0; i < 5; i++) {
         fc_tick_t tick = {
-            .symbol_id = 0,
+            .symbol_id    = 0,
             .timestamp_ns = 1000000000LL + i * 60000000000LL, // 1 minute apart
-            .price = prices[i],
-            .volume = 100.0,
-            .amount = prices[i] * 100.0
+            .price        = prices[i],
+            .volume       = 100.0,
+            .amount       = prices[i] * 100.0
         };
 
         int ret = fc_ticker_merge_update(ctx, &tick);
@@ -620,11 +623,11 @@ TEST(test_ticker_merge_price_fluctuation) {
 
     // Send 6th tick to complete the 5-minute period
     fc_tick_t tick = {
-        .symbol_id = 0,
+        .symbol_id    = 0,
         .timestamp_ns = 1000000000LL + 5 * 60000000000LL,
-        .price = 102.0,
-        .volume = 100.0,
-        .amount = 10200.0
+        .price        = 102.0,
+        .volume       = 100.0,
+        .amount       = 10200.0
     };
     int ret = fc_ticker_merge_update(ctx, &tick);
     ASSERT_EQ(ret, FC_OK);
@@ -647,7 +650,7 @@ TEST(test_ticker_merge_price_fluctuation) {
 }
 
 TEST(test_ticker_merge_large_merge_count_256) {
-    int64_t base_period = 1000000000LL; // 1 second
+    int64_t base_period       = 1000000000LL;     // 1 second
     int64_t derived_periods[] = {256000000000LL}; // 256 seconds
 
     fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
@@ -658,11 +661,11 @@ TEST(test_ticker_merge_large_merge_count_256) {
     // Send 256 ticks to complete one derived period
     for (int i = 0; i < 256; i++) {
         fc_tick_t tick = {
-            .symbol_id = 0,
+            .symbol_id    = 0,
             .timestamp_ns = 1000000000LL + i * base_period,
-            .price = 100.0 + i,
-            .volume = 10.0,
-            .amount = (100.0 + i) * 10.0
+            .price        = 100.0 + i,
+            .volume       = 10.0,
+            .amount       = (100.0 + i) * 10.0
         };
         int ret = fc_ticker_merge_update(ctx, &tick);
         ASSERT_EQ(ret, FC_OK);
@@ -670,11 +673,11 @@ TEST(test_ticker_merge_large_merge_count_256) {
 
     // Trigger completion with 257th tick
     fc_tick_t tick = {
-        .symbol_id = 0,
+        .symbol_id    = 0,
         .timestamp_ns = 1000000000LL + 256 * base_period,
-        .price = 356.0,
-        .volume = 10.0,
-        .amount = 3560.0
+        .price        = 356.0,
+        .volume       = 10.0,
+        .amount       = 3560.0
     };
     int ret = fc_ticker_merge_update(ctx, &tick);
     ASSERT_EQ(ret, FC_OK);
@@ -693,7 +696,7 @@ TEST(test_ticker_merge_large_merge_count_256) {
 }
 
 TEST(test_ticker_merge_large_merge_count_1440) {
-    int64_t base_period = 60000000000LL; // 1 minute
+    int64_t base_period       = 60000000000LL;      // 1 minute
     int64_t derived_periods[] = {86400000000000LL}; // 1 day (1440 minutes)
 
     fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
@@ -704,11 +707,11 @@ TEST(test_ticker_merge_large_merge_count_1440) {
     // Send 1440 ticks to complete one day
     for (int i = 0; i < 1440; i++) {
         fc_tick_t tick = {
-            .symbol_id = 0,
+            .symbol_id    = 0,
             .timestamp_ns = 1000000000000LL + i * base_period,
-            .price = 100.0 + (i % 100),
-            .volume = 1.0,
-            .amount = 100.0 + (i % 100)
+            .price        = 100.0 + (i % 100),
+            .volume       = 1.0,
+            .amount       = 100.0 + (i % 100)
         };
         int ret = fc_ticker_merge_update(ctx, &tick);
         ASSERT_EQ(ret, FC_OK);
@@ -716,11 +719,11 @@ TEST(test_ticker_merge_large_merge_count_1440) {
 
     // Trigger completion
     fc_tick_t tick = {
-        .symbol_id = 0,
+        .symbol_id    = 0,
         .timestamp_ns = 1000000000000LL + 1440 * base_period,
-        .price = 150.0,
-        .volume = 1.0,
-        .amount = 150.0
+        .price        = 150.0,
+        .volume       = 1.0,
+        .amount       = 150.0
     };
     int ret = fc_ticker_merge_update(ctx, &tick);
     ASSERT_EQ(ret, FC_OK);
@@ -736,7 +739,7 @@ TEST(test_ticker_merge_large_merge_count_1440) {
 }
 
 TEST(test_ticker_merge_large_merge_count_3600) {
-    int64_t base_period = 1000000000LL; // 1 second
+    int64_t base_period       = 1000000000LL;      // 1 second
     int64_t derived_periods[] = {3600000000000LL}; // 1 hour (3600 seconds)
 
     fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
@@ -747,11 +750,11 @@ TEST(test_ticker_merge_large_merge_count_3600) {
     // Send 3600 ticks for symbol 0
     for (int i = 0; i < 3600; i++) {
         fc_tick_t tick = {
-            .symbol_id = 0,
+            .symbol_id    = 0,
             .timestamp_ns = 1000000000000LL + i * base_period,
-            .price = 100.0,
-            .volume = 0.1,
-            .amount = 10.0
+            .price        = 100.0,
+            .volume       = 0.1,
+            .amount       = 10.0
         };
         int ret = fc_ticker_merge_update(ctx, &tick);
         ASSERT_EQ(ret, FC_OK);
@@ -759,11 +762,11 @@ TEST(test_ticker_merge_large_merge_count_3600) {
 
     // Trigger completion
     fc_tick_t tick = {
-        .symbol_id = 0,
+        .symbol_id    = 0,
         .timestamp_ns = 1000000000000LL + 3600 * base_period,
-        .price = 100.0,
-        .volume = 0.1,
-        .amount = 10.0
+        .price        = 100.0,
+        .volume       = 0.1,
+        .amount       = 10.0
     };
     int ret = fc_ticker_merge_update(ctx, &tick);
     ASSERT_EQ(ret, FC_OK);
@@ -779,29 +782,26 @@ TEST(test_ticker_merge_large_merge_count_3600) {
 }
 
 TEST(test_ticker_merge_all_precision_modes_large_count) {
-    int64_t base_period = 1000000000LL; // 1 second
+    int64_t base_period       = 1000000000LL;     // 1 second
     int64_t derived_periods[] = {500000000000LL}; // 500 seconds
 
     fc_ticker_precision_mode_t modes[] = {
-        FC_TICKER_PRECISION_STANDARD,
-        FC_TICKER_PRECISION_KAHAN,
-        FC_TICKER_PRECISION_BIGFLOAT
+        FC_TICKER_PRECISION_STANDARD, FC_TICKER_PRECISION_KAHAN, FC_TICKER_PRECISION_BIGFLOAT
     };
 
     for (int mode_idx = 0; mode_idx < 3; mode_idx++) {
-        fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-            1, base_period, derived_periods, 1, modes[mode_idx], NULL, NULL
-        );
+        fc_ticker_merge_ctx_t* ctx =
+            fc_ticker_merge_create(1, base_period, derived_periods, 1, modes[mode_idx], NULL, NULL);
         ASSERT_NOT_NULL(ctx);
 
         // Send 500 ticks with small volumes to test precision
         for (int i = 0; i < 500; i++) {
             fc_tick_t tick = {
-                .symbol_id = 0,
+                .symbol_id    = 0,
                 .timestamp_ns = 1000000000000LL + i * base_period,
-                .price = 100.0,
-                .volume = 0.001,
-                .amount = 0.1
+                .price        = 100.0,
+                .volume       = 0.001,
+                .amount       = 0.1
             };
             int ret = fc_ticker_merge_update(ctx, &tick);
             ASSERT_EQ(ret, FC_OK);
@@ -809,11 +809,11 @@ TEST(test_ticker_merge_all_precision_modes_large_count) {
 
         // Trigger completion
         fc_tick_t tick = {
-            .symbol_id = 0,
+            .symbol_id    = 0,
             .timestamp_ns = 1000000000000LL + 500 * base_period,
-            .price = 100.0,
-            .volume = 0.001,
-            .amount = 0.1
+            .price        = 100.0,
+            .volume       = 0.001,
+            .amount       = 0.1
         };
         int ret = fc_ticker_merge_update(ctx, &tick);
         ASSERT_EQ(ret, FC_OK);

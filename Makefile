@@ -152,7 +152,11 @@ bench:
 format:
 	@echo "==> Formatting C code with clang-format"
 	@if command -v clang-format >/dev/null 2>&1; then \
-		find exchange-c include \( -path '*/modules/*' -prune \) -o \( -name '*.c' -o -name '*.h' \) -type f -exec clang-format -i {} \; ; \
+		find . \( -name '*.c' -o -name '*.h' \) -type f \
+			! -path '*/build/*' \
+			! -path '*/modules/*' \
+			! -path '*/exchange-c/signal/*' \
+			-exec clang-format -i {} \; ; \
 	else \
 		echo "WARNING: clang-format not found, skipping format check"; \
 	fi
@@ -224,20 +228,26 @@ clang-tidy:
 		-DCMAKE_BUILD_TYPE=Debug \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null 2>&1 || true
 	@echo "==> Running clang-tidy analysis on C source files"
-	@find exchange-c include \( -path '*/modules/*' -prune \) -o \( -name '*.c' -o -name '*.h' \) \
-		! -name 'platform_win.c' \
-		! -name 'platform_macos.c' \
-		-type f -print | while read f; do echo "  Checking: $$f"; done
-	@find exchange-c include \( -path '*/modules/*' -prune \) -o \( -name '*.c' -o -name '*.h' \) \
-		! -name 'platform_win.c' \
-		! -name 'platform_macos.c' \
-		-type f -exec clang-tidy -p build/clang-tidy {} \; 2>&1 | \
+	@find . -name '*.c' -type f \
+		! -path '*/build/*' \
+		! -path '*/modules/*' \
+		! -path '*/exchange-c/signal/*' \
+		-print | while read f; do echo "  Checking: $$f"; done
+	@find . -name '*.c' -type f \
+		! -path '*/build/*' \
+		! -path '*/modules/*' \
+		! -path '*/exchange-c/signal/*' \
+		-exec clang-tidy -p build/clang-tidy {} \; 2>&1 | \
 		grep -v "warnings generated" || true
 	@echo "==> clang-tidy: Analysis complete"
 
 cppcheck:
 	@echo "==> Running cppcheck static analysis on C source files"
-	@find exchange-c include \( -path '*/modules/*' -prune \) -o \( -name '*.c' -o -name '*.h' \) -type f -print > /tmp/cppcheck-files.txt
+	@find . -name '*.c' -type f \
+		! -path '*/build/*' \
+		! -path '*/modules/*' \
+		! -path '*/exchange-c/signal/*' \
+		-print > /tmp/cppcheck-files.txt
 	@echo "Found $$(wc -l < /tmp/cppcheck-files.txt) files to check"
 	@cppcheck --enable=warning,performance,portability \
 		--suppress=missingIncludeSystem \

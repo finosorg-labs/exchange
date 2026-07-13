@@ -22,42 +22,42 @@ static void generate_ticks(fc_tick_t* ticks, size_t num_ticks, uint32_t num_symb
 }
 
 static void bench_base_only_fn(void* user_data) {
-    void** data_ptr              = (void**) user_data;
-    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
+    void** data_ptr            = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* tick            = (fc_tick_t*) data_ptr[1];
 
     fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_5min_merge_fn(void* user_data) {
-    void** data_ptr              = (void**) user_data;
-    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
+    void** data_ptr            = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* tick            = (fc_tick_t*) data_ptr[1];
 
     fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_multiple_periods_fn(void* user_data) {
-    void** data_ptr              = (void**) user_data;
-    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
+    void** data_ptr            = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* tick            = (fc_tick_t*) data_ptr[1];
 
     fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_multi_symbol_fn(void* user_data) {
-    void** data_ptr              = (void**) user_data;
-    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* tick              = (fc_tick_t*) data_ptr[1];
+    void** data_ptr            = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* tick            = (fc_tick_t*) data_ptr[1];
 
     fc_ticker_merge_update(ctx, tick);
 }
 
 static void bench_batch_update_fn(void* user_data) {
-    void** data_ptr              = (void**) user_data;
-    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t batch_size            = (size_t) (uintptr_t) data_ptr[2];
+    void** data_ptr            = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* ticks           = (fc_tick_t*) data_ptr[1];
+    size_t batch_size          = (size_t) (uintptr_t) data_ptr[2];
 
     fc_ticker_merge_update_batch(ctx, ticks, batch_size);
 }
@@ -75,22 +75,16 @@ static void run_ticker_merge_benchmarks(void) {
         uint32_t num_symbols;
         fc_bench_fn bench_fn;
     } tests[] = {
-        {"TickerMerge/BaseOnly", NULL, 0, 1, bench_base_only_fn},
-        {"TickerMerge/5min", (const int64_t[]){300000000000LL}, 1, 1, bench_5min_merge_fn},
-        {
-            "TickerMerge/Multi/5m-15m-1h",
-            (const int64_t[]){300000000000LL, 900000000000LL, 3600000000000LL},
-            3,
-            1,
-            bench_multiple_periods_fn
-        },
-        {
-            "TickerMerge/MultiSymbol/100",
-            (const int64_t[]){300000000000LL},
-            1,
-            100,
-            bench_multi_symbol_fn
-        },
+        {"TickerMerge/BaseOnly",        NULL,                                0, 1,   bench_base_only_fn },
+        {"TickerMerge/5min",            (const int64_t[]){300000000000LL},   1, 1,   bench_5min_merge_fn},
+        {"TickerMerge/Multi/5m-15m-1h",
+         (const int64_t[]){300000000000LL, 900000000000LL, 3600000000000LL},
+         3,                                                                     1,
+         bench_multiple_periods_fn                                                                      },
+        {"TickerMerge/MultiSymbol/100",
+         (const int64_t[]){300000000000LL},
+         1,                                                                     100,
+         bench_multi_symbol_fn                                                                          },
     };
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
@@ -132,7 +126,7 @@ static void run_ticker_merge_benchmarks(void) {
 
     // Batch update benchmark
     {
-        const size_t batch_size = 1000;
+        const size_t batch_size    = 1000;
         fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
             1,
             base_period_ns,
@@ -160,9 +154,11 @@ static void run_ticker_merge_benchmarks(void) {
                 fc_bench_run(&config, bench_batch_update_fn, user_data, &result);
 
                 // Show per-tick breakdown
-                printf("TickerMerge/Batch/1K (per-tick)               	%10lu	%12.2f ns/op\n",
-                       (unsigned long)result.iterations * batch_size,
-                       result.mean_ns / batch_size);
+                printf(
+                    "TickerMerge/Batch/1K (per-tick)               	%10llu	%12.2f ns/op\n",
+                    (unsigned long long) result.iterations * batch_size,
+                    result.mean_ns / batch_size
+                );
 
                 free(ticks);
             }
@@ -175,7 +171,7 @@ static void run_precision_mode_benchmarks(void) {
     printf("\nPrecision Mode Benchmarks\n");
     printf("------------------------------------------------------------\n");
 
-    const int64_t base_period_ns = 60000000000LL;
+    const int64_t base_period_ns    = 60000000000LL;
     const int64_t derived_periods[] = {300000000000LL};
 
     struct {
@@ -183,19 +179,13 @@ static void run_precision_mode_benchmarks(void) {
         fc_ticker_precision_mode_t mode;
     } tests[] = {
         {"TickerMerge/Precision/Standard", FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/Precision/Kahan", FC_TICKER_PRECISION_KAHAN},
+        {"TickerMerge/Precision/Kahan",    FC_TICKER_PRECISION_KAHAN   },
         {"TickerMerge/Precision/BigFloat", FC_TICKER_PRECISION_BIGFLOAT},
     };
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
         fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-            1,
-            base_period_ns,
-            derived_periods,
-            1,
-            tests[i].mode,
-            NULL,
-            NULL
+            1, base_period_ns, derived_periods, 1, tests[i].mode, NULL, NULL
         );
 
         if (ctx == NULL) {
@@ -226,10 +216,10 @@ static void run_precision_mode_benchmarks(void) {
 }
 
 static void bench_merge_operation_fn(void* user_data) {
-    void** data_ptr              = (void**) user_data;
-    fc_ticker_merge_ctx_t* ctx   = (fc_ticker_merge_ctx_t*) data_ptr[0];
-    fc_tick_t* ticks             = (fc_tick_t*) data_ptr[1];
-    size_t num_ticks             = (size_t) (uintptr_t) data_ptr[2];
+    void** data_ptr            = (void**) user_data;
+    fc_ticker_merge_ctx_t* ctx = (fc_ticker_merge_ctx_t*) data_ptr[0];
+    fc_tick_t* ticks           = (fc_tick_t*) data_ptr[1];
+    size_t num_ticks           = (size_t) (uintptr_t) data_ptr[2];
 
     for (size_t i = 0; i < num_ticks; i++) {
         fc_ticker_merge_update(ctx, &ticks[i]);
@@ -248,32 +238,32 @@ static void run_merge_count_benchmarks(void) {
         size_t merge_count;
         fc_ticker_precision_mode_t mode;
     } tests[] = {
-        {"TickerMerge/MergeCount/5/Standard", 300000000000LL, 5, FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/MergeCount/5/Kahan", 300000000000LL, 5, FC_TICKER_PRECISION_KAHAN},
-        {"TickerMerge/MergeCount/5/BigFloat", 300000000000LL, 5, FC_TICKER_PRECISION_BIGFLOAT},
-        {"TickerMerge/MergeCount/15/Standard", 900000000000LL, 15, FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/MergeCount/15/Kahan", 900000000000LL, 15, FC_TICKER_PRECISION_KAHAN},
-        {"TickerMerge/MergeCount/15/BigFloat", 900000000000LL, 15, FC_TICKER_PRECISION_BIGFLOAT},
-        {"TickerMerge/MergeCount/60/Standard", 3600000000000LL, 60, FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/MergeCount/60/Kahan", 3600000000000LL, 60, FC_TICKER_PRECISION_KAHAN},
-        {"TickerMerge/MergeCount/60/BigFloat", 3600000000000LL, 60, FC_TICKER_PRECISION_BIGFLOAT},
-        {"TickerMerge/MergeCount/240/Standard", 14400000000000LL, 240, FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/MergeCount/240/Kahan", 14400000000000LL, 240, FC_TICKER_PRECISION_KAHAN},
-        {"TickerMerge/MergeCount/240/BigFloat", 14400000000000LL, 240, FC_TICKER_PRECISION_BIGFLOAT},
-        {"TickerMerge/MergeCount/1440/Standard", 86400000000000LL, 1440, FC_TICKER_PRECISION_STANDARD},
-        {"TickerMerge/MergeCount/1440/Kahan", 86400000000000LL, 1440, FC_TICKER_PRECISION_KAHAN},
-        {"TickerMerge/MergeCount/1440/BigFloat", 86400000000000LL, 1440, FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/5/Standard",    300000000000LL,   5,    FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/5/Kahan",       300000000000LL,   5,    FC_TICKER_PRECISION_KAHAN   },
+        {"TickerMerge/MergeCount/5/BigFloat",    300000000000LL,   5,    FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/15/Standard",   900000000000LL,   15,   FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/15/Kahan",      900000000000LL,   15,   FC_TICKER_PRECISION_KAHAN   },
+        {"TickerMerge/MergeCount/15/BigFloat",   900000000000LL,   15,   FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/60/Standard",   3600000000000LL,  60,   FC_TICKER_PRECISION_STANDARD},
+        {"TickerMerge/MergeCount/60/Kahan",      3600000000000LL,  60,   FC_TICKER_PRECISION_KAHAN   },
+        {"TickerMerge/MergeCount/60/BigFloat",   3600000000000LL,  60,   FC_TICKER_PRECISION_BIGFLOAT},
+        {"TickerMerge/MergeCount/240/Standard",  14400000000000LL, 240,  FC_TICKER_PRECISION_STANDARD
+        },
+        {"TickerMerge/MergeCount/240/Kahan",     14400000000000LL, 240,  FC_TICKER_PRECISION_KAHAN   },
+        {"TickerMerge/MergeCount/240/BigFloat",  14400000000000LL, 240,  FC_TICKER_PRECISION_BIGFLOAT
+        },
+        {"TickerMerge/MergeCount/1440/Standard",
+         86400000000000LL,                                         1440,
+         FC_TICKER_PRECISION_STANDARD                                                                },
+        {"TickerMerge/MergeCount/1440/Kahan",    86400000000000LL, 1440, FC_TICKER_PRECISION_KAHAN   },
+        {"TickerMerge/MergeCount/1440/BigFloat",
+         86400000000000LL,                                         1440,
+         FC_TICKER_PRECISION_BIGFLOAT                                                                },
     };
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
         fc_ticker_merge_ctx_t* ctx = fc_ticker_merge_create(
-            1,
-            base_period_ns,
-            &tests[i].derived_period_ns,
-            1,
-            tests[i].mode,
-            NULL,
-            NULL
+            1, base_period_ns, &tests[i].derived_period_ns, 1, tests[i].mode, NULL, NULL
         );
 
         if (ctx == NULL) {

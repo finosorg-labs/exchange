@@ -3,11 +3,11 @@
  * @brief Unit tests for micro-price signal computation
  */
 
-#include "signal/microprice.h"
-#include "test_framework.h"
-#include "platform.h"
 #include "error.h"
 #include "mem_aligned.h"
+#include "platform.h"
+#include "signal/microprice.h"
+#include "test_framework.h"
 #include <math.h>
 #include <string.h>
 
@@ -22,10 +22,10 @@ TEST(test_microprice_basic) {
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
     FC_TEST_ASSERT_DOUBLE_EQ(mp_out[0], 100.25, 1e-10);
-    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[1], 100.4, 1e-10);   // More bid weight -> closer to ask
-    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[2], 100.1, 1e-10);   // More ask weight -> closer to bid
-    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[3], 100.99009900990099, 1e-10);  // Heavy bid weight
-    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[4], 100.00990099009901, 1e-10);  // Heavy ask weight
+    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[1], 100.4, 1e-10); // More bid weight -> closer to ask
+    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[2], 100.1, 1e-10); // More ask weight -> closer to bid
+    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[3], 100.99009900990099, 1e-10); // Heavy bid weight
+    FC_TEST_ASSERT_DOUBLE_EQ(mp_out[4], 100.00990099009901, 1e-10); // Heavy ask weight
 }
 
 TEST(test_microprice_edge_cases) {
@@ -43,7 +43,7 @@ TEST(test_microprice_edge_cases) {
     FC_TEST_ASSERT_DOUBLE_EQ(mp_out[1], 100.0, 1e-10);
     ASSERT_FALSE(isnan(mp_out[2])); // bid_q=500, ask_q=0 -> ask_p weighted by bid_q
     FC_TEST_ASSERT_DOUBLE_EQ(mp_out[2], 100.5, 1e-10);
-    ASSERT_TRUE(isnan(mp_out[3]));  // Negative total -> NaN
+    ASSERT_TRUE(isnan(mp_out[3])); // Negative total -> NaN
 }
 
 TEST(test_microprice_null_pointers) {
@@ -53,11 +53,21 @@ TEST(test_microprice_null_pointers) {
     double ask_p[1] = {100.5};
     double ask_q[1] = {500.0};
 
-    FC_TEST_ASSERT_EQ(fc_ex_sig_microprice_batch(NULL, bid_p, bid_q, ask_p, ask_q, 1), FC_ERR_INVALID_ARG);
-    FC_TEST_ASSERT_EQ(fc_ex_sig_microprice_batch(mp_out, NULL, bid_q, ask_p, ask_q, 1), FC_ERR_INVALID_ARG);
-    FC_TEST_ASSERT_EQ(fc_ex_sig_microprice_batch(mp_out, bid_p, NULL, ask_p, ask_q, 1), FC_ERR_INVALID_ARG);
-    FC_TEST_ASSERT_EQ(fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, NULL, ask_q, 1), FC_ERR_INVALID_ARG);
-    FC_TEST_ASSERT_EQ(fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, ask_p, NULL, 1), FC_ERR_INVALID_ARG);
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_microprice_batch(NULL, bid_p, bid_q, ask_p, ask_q, 1), FC_ERR_INVALID_ARG
+    );
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_microprice_batch(mp_out, NULL, bid_q, ask_p, ask_q, 1), FC_ERR_INVALID_ARG
+    );
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_microprice_batch(mp_out, bid_p, NULL, ask_p, ask_q, 1), FC_ERR_INVALID_ARG
+    );
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, NULL, ask_q, 1), FC_ERR_INVALID_ARG
+    );
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, ask_p, NULL, 1), FC_ERR_INVALID_ARG
+    );
 }
 
 TEST(test_microprice_invalid_size) {
@@ -67,7 +77,9 @@ TEST(test_microprice_invalid_size) {
     double ask_p[1] = {100.5};
     double ask_q[1] = {500.0};
 
-    FC_TEST_ASSERT_EQ(fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, ask_p, ask_q, 0), FC_ERR_INVALID_ARG);
+    FC_TEST_ASSERT_EQ(
+        fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, ask_p, ask_q, 0), FC_ERR_INVALID_ARG
+    );
 }
 
 TEST(test_microprice_numerical_accuracy) {
@@ -109,18 +121,18 @@ TEST(test_microprice_batch_sizes) {
     size_t n_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
     for (size_t s = 0; s < n_sizes; s++) {
-        size_t n = sizes[s];
+        size_t n       = sizes[s];
         double* mp_out = fc_aligned_alloc(n * sizeof(double), 64);
-        double* bid_p = fc_aligned_alloc(n * sizeof(double), 64);
-        double* bid_q = fc_aligned_alloc(n * sizeof(double), 64);
-        double* ask_p = fc_aligned_alloc(n * sizeof(double), 64);
-        double* ask_q = fc_aligned_alloc(n * sizeof(double), 64);
+        double* bid_p  = fc_aligned_alloc(n * sizeof(double), 64);
+        double* bid_q  = fc_aligned_alloc(n * sizeof(double), 64);
+        double* ask_p  = fc_aligned_alloc(n * sizeof(double), 64);
+        double* ask_q  = fc_aligned_alloc(n * sizeof(double), 64);
 
         for (size_t i = 0; i < n; i++) {
-            bid_p[i] = 100.0 + (double)i * 0.1;
-            bid_q[i] = 500.0 + (double)i;
+            bid_p[i] = 100.0 + (double) i * 0.1;
+            bid_q[i] = 500.0 + (double) i;
             ask_p[i] = bid_p[i] + 0.5;
-            ask_q[i] = 500.0 + (double)(n - i);
+            ask_q[i] = 500.0 + (double) (n - i);
         }
 
         fc_status_t status = fc_ex_sig_microprice_batch(mp_out, bid_p, bid_q, ask_p, ask_q, n);

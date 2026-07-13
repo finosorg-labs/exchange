@@ -3,14 +3,14 @@
  * @brief Performance benchmarks for Alpha factor aggregation
  */
 
-#include "signal/alpha.h"
 #include "bench_framework.h"
 #include "platform.h"
+#include "signal/alpha.h"
 #include "simd_detect.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 /* Helper macro to align size to 64-byte boundary */
 #define ALIGN_SIZE(size) (((size) + 63) / 64 * 64)
@@ -48,7 +48,7 @@ typedef struct {
 } bench_invvol_data_t;
 
 static void bench_alpha_aggregate_fn(void* user_data) {
-    bench_alpha_data_t* data = (bench_alpha_data_t*)user_data;
+    bench_alpha_data_t* data = (bench_alpha_data_t*) user_data;
     fc_ex_sig_alpha_aggregate(
         data->alpha_out,
         data->confidence_out,
@@ -61,26 +61,32 @@ static void bench_alpha_aggregate_fn(void* user_data) {
 }
 
 static void bench_normalize_weights_fn(void* user_data) {
-    bench_normalize_data_t* data = (bench_normalize_data_t*)user_data;
-    fc_ex_sig_normalize_weights(data->weights_out, data->weights_in, data->n_symbols, data->n_signals);
+    bench_normalize_data_t* data = (bench_normalize_data_t*) user_data;
+    fc_ex_sig_normalize_weights(
+        data->weights_out, data->weights_in, data->n_symbols, data->n_signals
+    );
 }
 
 static void bench_compute_agreement_fn(void* user_data) {
-    bench_agreement_data_t* data = (bench_agreement_data_t*)user_data;
-    fc_ex_sig_compute_agreement(data->agreement_out, data->signals, data->n_symbols, data->n_signals);
+    bench_agreement_data_t* data = (bench_agreement_data_t*) user_data;
+    fc_ex_sig_compute_agreement(
+        data->agreement_out, data->signals, data->n_symbols, data->n_signals
+    );
 }
 
 static void bench_inverse_vol_weights_fn(void* user_data) {
-    bench_invvol_data_t* data = (bench_invvol_data_t*)user_data;
-    fc_ex_sig_inverse_vol_weights(data->weights_out, data->signals_hist, data->work_buffer, data->window_size, data->n_signals);
+    bench_invvol_data_t* data = (bench_invvol_data_t*) user_data;
+    fc_ex_sig_inverse_vol_weights(
+        data->weights_out, data->signals_hist, data->work_buffer, data->window_size, data->n_signals
+    );
 }
 
 static void bench_alpha_aggregate_impl(size_t n_symbols, int n_signals, const char* name) {
-    size_t signals_size = n_symbols * n_signals;
+    const size_t array_size = n_symbols * n_signals;
 
-    double* signals = aligned_alloc(64, ALIGN_SIZE(signals_size * sizeof(double)));
-    double* weights = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
-    double* alpha_out = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
+    double* signals        = aligned_alloc(64, ALIGN_SIZE(array_size * sizeof(double)));
+    double* weights        = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
+    double* alpha_out      = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
     double* confidence_out = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
 
     if (!signals || !weights || !alpha_out || !confidence_out) {
@@ -92,38 +98,38 @@ static void bench_alpha_aggregate_impl(size_t n_symbols, int n_signals, const ch
     for (size_t i = 0; i < n_symbols; i++) {
         for (int j = 0; j < n_signals; j++) {
             /* Mix of positive, negative, and varying magnitudes */
-            double phase = (double)(i + j) * 0.1;
+            double phase               = (double) (i + j) * 0.1;
             signals[i * n_signals + j] = sin(phase) * 2.0 + cos(phase * 0.5);
         }
     }
 
     /* Initialize weights */
     for (int j = 0; j < n_signals; j++) {
-        weights[j] = 1.0 / (double)n_signals;
+        weights[j] = 1.0 / (double) n_signals;
     }
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
+        .normalize_weights  = 0,
         .per_symbol_weights = 0,
-        .min_confidence = 0.3,
-        .strength_scale = 1.0
+        .min_confidence     = 0.3,
+        .strength_scale     = 1.0
     };
 
     bench_alpha_data_t data = {
-        .alpha_out = alpha_out,
+        .alpha_out      = alpha_out,
         .confidence_out = confidence_out,
-        .signals = signals,
-        .weights = weights,
-        .cfg = &cfg,
-        .n_symbols = n_symbols,
-        .n_signals = n_signals
+        .signals        = signals,
+        .weights        = weights,
+        .cfg            = &cfg,
+        .n_symbols      = n_symbols,
+        .n_signals      = n_signals
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = signals_size * sizeof(double);
-    config.min_iterations = 100;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = array_size * sizeof(double);
+    config.min_iterations    = 100;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_alpha_aggregate_fn, &data, &result);
@@ -135,13 +141,16 @@ static void bench_alpha_aggregate_impl(size_t n_symbols, int n_signals, const ch
     free(confidence_out);
 }
 
-static void bench_alpha_aggregate_per_symbol_weights(size_t n_symbols, int n_signals, const char* name) {
-    size_t signals_size = n_symbols * n_signals;
-    size_t weights_size = n_symbols * n_signals;
+static void bench_alpha_aggregate_per_symbol_weights(
+    size_t n_symbols,
+    int n_signals,
+    const char* name
+) {
+    const size_t array_size = n_symbols * n_signals;
 
-    double* signals = aligned_alloc(64, ALIGN_SIZE(signals_size * sizeof(double)));
-    double* weights = aligned_alloc(64, ALIGN_SIZE(weights_size * sizeof(double)));
-    double* alpha_out = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
+    double* signals        = aligned_alloc(64, ALIGN_SIZE(array_size * sizeof(double)));
+    double* weights        = aligned_alloc(64, ALIGN_SIZE(array_size * sizeof(double)));
+    double* alpha_out      = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
     double* confidence_out = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
 
     if (!signals || !weights || !alpha_out || !confidence_out) {
@@ -152,33 +161,33 @@ static void bench_alpha_aggregate_per_symbol_weights(size_t n_symbols, int n_sig
     /* Initialize data */
     for (size_t i = 0; i < n_symbols; i++) {
         for (int j = 0; j < n_signals; j++) {
-            double phase = (double)(i + j) * 0.1;
+            double phase               = (double) (i + j) * 0.1;
             signals[i * n_signals + j] = sin(phase) * 2.0;
-            weights[i * n_signals + j] = 1.0 / (double)n_signals;
+            weights[i * n_signals + j] = 1.0 / (double) n_signals;
         }
     }
 
     fc_ex_alpha_cfg_t cfg = {
-        .normalize_weights = 0,
-        .per_symbol_weights = 1,  /* Per-symbol weights */
-        .min_confidence = 0.3
+        .normalize_weights  = 0,
+        .per_symbol_weights = 1, /* Per-symbol weights */
+        .min_confidence     = 0.3
     };
 
     bench_alpha_data_t data = {
-        .alpha_out = alpha_out,
+        .alpha_out      = alpha_out,
         .confidence_out = confidence_out,
-        .signals = signals,
-        .weights = weights,
-        .cfg = &cfg,
-        .n_symbols = n_symbols,
-        .n_signals = n_signals
+        .signals        = signals,
+        .weights        = weights,
+        .cfg            = &cfg,
+        .n_symbols      = n_symbols,
+        .n_signals      = n_signals
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = signals_size * sizeof(double);
-    config.min_iterations = 100;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = array_size * sizeof(double);
+    config.min_iterations    = 100;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_alpha_aggregate_fn, &data, &result);
@@ -193,7 +202,7 @@ static void bench_alpha_aggregate_per_symbol_weights(size_t n_symbols, int n_sig
 static void bench_normalize_weights_impl(size_t n_symbols, int n_signals, const char* name) {
     size_t weights_size = n_symbols * n_signals;
 
-    double* weights_in = aligned_alloc(64, ALIGN_SIZE(weights_size * sizeof(double)));
+    double* weights_in  = aligned_alloc(64, ALIGN_SIZE(weights_size * sizeof(double)));
     double* weights_out = aligned_alloc(64, ALIGN_SIZE(weights_size * sizeof(double)));
 
     if (!weights_in || !weights_out) {
@@ -203,21 +212,21 @@ static void bench_normalize_weights_impl(size_t n_symbols, int n_signals, const 
 
     /* Initialize with non-normalized weights */
     for (size_t i = 0; i < weights_size; i++) {
-        weights_in[i] = (double)(i % 10 + 1);
+        weights_in[i] = (double) (i % 10 + 1);
     }
 
     bench_normalize_data_t data = {
         .weights_out = weights_out,
-        .weights_in = weights_in,
-        .n_symbols = n_symbols,
-        .n_signals = n_signals
+        .weights_in  = weights_in,
+        .n_symbols   = n_symbols,
+        .n_signals   = n_signals
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = weights_size * sizeof(double);
-    config.min_iterations = 1000;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = weights_size * sizeof(double);
+    config.min_iterations    = 1000;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_normalize_weights_fn, &data, &result);
@@ -228,9 +237,9 @@ static void bench_normalize_weights_impl(size_t n_symbols, int n_signals, const 
 }
 
 static void bench_compute_agreement_impl(size_t n_symbols, int n_signals, const char* name) {
-    size_t signals_size = n_symbols * n_signals;
+    const size_t array_size = n_symbols * n_signals;
 
-    double* signals = aligned_alloc(64, ALIGN_SIZE(signals_size * sizeof(double)));
+    double* signals       = aligned_alloc(64, ALIGN_SIZE(array_size * sizeof(double)));
     double* agreement_out = aligned_alloc(64, ALIGN_SIZE(n_symbols * sizeof(double)));
 
     if (!signals || !agreement_out) {
@@ -239,22 +248,22 @@ static void bench_compute_agreement_impl(size_t n_symbols, int n_signals, const 
     }
 
     /* Initialize signals */
-    for (size_t i = 0; i < signals_size; i++) {
-        signals[i] = sin((double)i * 0.1) * 2.0;
+    for (size_t i = 0; i < array_size; i++) {
+        signals[i] = sin((double) i * 0.1) * 2.0;
     }
 
     bench_agreement_data_t data = {
         .agreement_out = agreement_out,
-        .signals = signals,
-        .n_symbols = n_symbols,
-        .n_signals = n_signals
+        .signals       = signals,
+        .n_symbols     = n_symbols,
+        .n_signals     = n_signals
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = signals_size * sizeof(double);
-    config.min_iterations = 100;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = array_size * sizeof(double);
+    config.min_iterations    = 100;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_compute_agreement_fn, &data, &result);
@@ -268,8 +277,8 @@ static void bench_inverse_vol_weights_impl(size_t window_size, int n_signals, co
     size_t hist_size = window_size * n_signals;
 
     double* signals_hist = aligned_alloc(64, ALIGN_SIZE(hist_size * sizeof(double)));
-    double* weights_out = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
-    double* work_buffer = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
+    double* weights_out  = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
+    double* work_buffer  = aligned_alloc(64, ALIGN_SIZE(n_signals * sizeof(double)));
 
     if (!signals_hist || !weights_out || !work_buffer) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -280,24 +289,24 @@ static void bench_inverse_vol_weights_impl(size_t window_size, int n_signals, co
     for (size_t t = 0; t < window_size; t++) {
         for (int j = 0; j < n_signals; j++) {
             /* Each signal has different volatility */
-            double vol = 0.1 + (double)j * 0.05;
-            signals_hist[t * n_signals + j] = sin((double)t * 0.1) * vol;
+            double vol                      = 0.1 + (double) j * 0.05;
+            signals_hist[t * n_signals + j] = sin((double) t * 0.1) * vol;
         }
     }
 
     bench_invvol_data_t data = {
-        .weights_out = weights_out,
+        .weights_out  = weights_out,
         .signals_hist = signals_hist,
-        .work_buffer = work_buffer,
-        .window_size = window_size,
-        .n_signals = n_signals
+        .work_buffer  = work_buffer,
+        .window_size  = window_size,
+        .n_signals    = n_signals
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = hist_size * sizeof(double);
-    config.min_iterations = 100;
-    config.min_time_ms = 100.0;
+    config.name              = name;
+    config.data_size         = hist_size * sizeof(double);
+    config.min_iterations    = 100;
+    config.min_time_ms       = 100.0;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_inverse_vol_weights_fn, &data, &result);

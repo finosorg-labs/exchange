@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_BOOKS_SMALL 10
+#define NUM_BOOKS_SMALL  10
 #define NUM_BOOKS_MEDIUM 100
-#define NUM_BOOKS_LARGE 1000
-#define MAX_LEGS 10
+#define NUM_BOOKS_LARGE  1000
+#define MAX_LEGS         10
 
 static void setup_test_data(
     double* leg_delta,
@@ -24,12 +24,12 @@ static void setup_test_data(
 ) {
     srand(42);
     for (size_t i = 0; i < n_books; i++) {
-        n_legs[i] = 3 + (rand() % (max_legs - 2));
+        n_legs[i]       = 3 + (rand() % (max_legs - 2));
         delta_future[i] = 0.8 + (rand() % 40) * 0.01;
 
         for (int j = 0; j < max_legs; j++) {
             leg_delta[i * max_legs + j] = -0.5 + (rand() % 100) * 0.01;
-            leg_qty[i * max_legs + j] = -100.0 + (rand() % 200) * 1.0;
+            leg_qty[i * max_legs + j]   = -100.0 + (rand() % 200) * 1.0;
         }
     }
 }
@@ -46,7 +46,7 @@ typedef struct {
 } bench_data_t;
 
 static void bench_delta_aggregate_func(void* user_data) {
-    bench_data_t* data = (bench_data_t*)user_data;
+    bench_data_t* data = (bench_data_t*) user_data;
 
     fc_ex_strat_delta_aggregate(
         data->delta_net_out,
@@ -62,39 +62,33 @@ static void bench_delta_aggregate_func(void* user_data) {
 
 static void run_benchmark_for_size(size_t n_books, const char* size_label) {
     bench_data_t data;
-    data.n_books = n_books;
+    data.n_books  = n_books;
     data.max_legs = MAX_LEGS;
 
-    data.leg_delta = (double*)malloc(n_books * MAX_LEGS * sizeof(double));
-    data.leg_qty = (double*)malloc(n_books * MAX_LEGS * sizeof(double));
-    data.n_legs = (int*)malloc(n_books * sizeof(int));
-    data.delta_future = (double*)malloc(n_books * sizeof(double));
-    data.delta_net_out = (double*)malloc(n_books * sizeof(double));
-    data.hedge_qty_out = (double*)malloc(n_books * sizeof(double));
+    data.leg_delta     = (double*) malloc(n_books * MAX_LEGS * sizeof(double));
+    data.leg_qty       = (double*) malloc(n_books * MAX_LEGS * sizeof(double));
+    data.n_legs        = (int*) malloc(n_books * sizeof(int));
+    data.delta_future  = (double*) malloc(n_books * sizeof(double));
+    data.delta_net_out = (double*) malloc(n_books * sizeof(double));
+    data.hedge_qty_out = (double*) malloc(n_books * sizeof(double));
 
-    if (!data.leg_delta || !data.leg_qty || !data.n_legs ||
-        !data.delta_future || !data.delta_net_out || !data.hedge_qty_out) {
+    if (!data.leg_delta || !data.leg_qty || !data.n_legs || !data.delta_future ||
+        !data.delta_net_out || !data.hedge_qty_out) {
         fprintf(stderr, "Failed to allocate memory for benchmark\n");
         goto cleanup;
     }
 
     setup_test_data(
-        data.leg_delta,
-        data.leg_qty,
-        data.n_legs,
-        data.delta_future,
-        n_books,
-        MAX_LEGS
+        data.leg_delta, data.leg_qty, data.n_legs, data.delta_future, n_books, MAX_LEGS
     );
 
     char bench_name[256];
     snprintf(bench_name, sizeof(bench_name), "strat_delta_aggregate_%s", size_label);
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = bench_name;
-    config.data_size = n_books * MAX_LEGS * sizeof(double) * 2 +
-                       n_books * sizeof(int) +
-                       n_books * sizeof(double);
+    config.name              = bench_name;
+    config.data_size =
+        n_books * MAX_LEGS * sizeof(double) * 2 + n_books * sizeof(int) + n_books * sizeof(double);
     config.min_time_ms = 200.0;
 
     fc_bench_result_t result;

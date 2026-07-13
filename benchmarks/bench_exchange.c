@@ -31,6 +31,7 @@ extern void bench_stat_arb_run(void);
 extern void bench_latency_arb_run(void);
 extern void bench_index_rebal_run(void);
 extern void bench_delta_hedge_run(void);
+extern void bench_marginal_var_run(void);
 
 /* Entry point for exchange benchmarks */
 void bench_exchange_run(void) {
@@ -61,6 +62,7 @@ void bench_exchange_run(void) {
     bench_latency_arb_run();
     bench_index_rebal_run();
     bench_delta_hedge_run();
+    bench_marginal_var_run();
 
     printf("\n");
     printf("============================================================\n");

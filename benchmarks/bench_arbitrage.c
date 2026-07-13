@@ -3,11 +3,11 @@
  * @brief Performance benchmarks for cross-market arbitrage spread computation
  */
 
-#include "signal/arbitrage.h"
 #include "bench_framework.h"
-#include "platform.h"
-#include "simd_detect.h"
 #include "mem_aligned.h"
+#include "platform.h"
+#include "signal/arbitrage.h"
+#include "simd_detect.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,22 +21,18 @@ typedef struct {
 } bench_arb_data_t;
 
 static void bench_arb_fn(void* user_data) {
-    bench_arb_data_t* data = (bench_arb_data_t*)user_data;
+    bench_arb_data_t* data = (bench_arb_data_t*) user_data;
     fc_ex_sig_arb_spread(
-        data->spread_out,
-        data->best_bid,
-        data->best_ask,
-        data->fees,
-        data->n_markets
+        data->spread_out, data->best_bid, data->best_ask, data->fees, data->n_markets
     );
 }
 
 static void bench_arb_spread_impl(int n_markets, const char* name) {
     const size_t output_size = n_markets * n_markets;
 
-    double* best_bid = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* best_ask = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* fees = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* best_bid   = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* best_ask   = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* fees       = fc_aligned_alloc(n_markets * sizeof(double), 64);
     double* spread_out = fc_aligned_alloc(output_size * sizeof(double), 64);
 
     if (!best_bid || !spread_out) {
@@ -47,23 +43,23 @@ static void bench_arb_spread_impl(int n_markets, const char* name) {
     /* Initialize with realistic trading data */
     for (int i = 0; i < n_markets; i++) {
         double base_price = 100.0 + i * 0.5;
-        best_bid[i] = base_price + (i % 3) * 0.01;
-        best_ask[i] = base_price + 0.01 + (i % 5) * 0.01;
-        fees[i] = 0.01 + (i % 10) * 0.001;
+        best_bid[i]       = base_price + (i % 3) * 0.01;
+        best_ask[i]       = base_price + 0.01 + (i % 5) * 0.01;
+        fees[i]           = 0.01 + (i % 10) * 0.001;
     }
 
     bench_arb_data_t data = {
         .spread_out = spread_out,
-        .best_bid = best_bid,
-        .best_ask = best_ask,
-        .fees = fees,
-        .n_markets = n_markets
+        .best_bid   = best_bid,
+        .best_ask   = best_ask,
+        .fees       = fees,
+        .n_markets  = n_markets
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = (n_markets * 3 + output_size) * sizeof(double);
-    config.min_iterations = 1000;
+    config.name              = name;
+    config.data_size         = (n_markets * 3 + output_size) * sizeof(double);
+    config.min_iterations    = 1000;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_arb_fn, &data, &result);

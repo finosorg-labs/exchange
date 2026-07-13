@@ -3,11 +3,11 @@
  * @brief Performance benchmarks for online normalization using Welford Z-Score
  */
 
-#include "signal/normalize.h"
 #include "bench_framework.h"
-#include "platform.h"
-#include "simd_detect.h"
 #include "mem_aligned.h"
+#include "platform.h"
+#include "signal/normalize.h"
+#include "simd_detect.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,21 +21,17 @@ typedef struct {
 } bench_normalize_data_t;
 
 static void bench_normalize_fn(void* user_data) {
-    bench_normalize_data_t* data = (bench_normalize_data_t*)user_data;
+    bench_normalize_data_t* data = (bench_normalize_data_t*) user_data;
     fc_ex_sig_normalize_zscore(
-        data->z_out,
-        data->states,
-        data->features,
-        data->n_symbols,
-        data->n_features
+        data->z_out, data->states, data->features, data->n_symbols, data->n_features
     );
 }
 
 static void bench_normalize_impl(size_t n_symbols, int n_features, const char* name) {
     /* Allocate aligned memory */
     fc_welford_state_t* states = fc_aligned_alloc(n_features * sizeof(fc_welford_state_t), 64);
-    double* features = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
-    double* z_out = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    double* features           = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    double* z_out              = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
 
     if (!states || !features || !z_out) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -52,24 +48,24 @@ static void bench_normalize_impl(size_t n_symbols, int n_features, const char* n
     /* Initialize features with realistic financial data patterns */
     for (size_t s = 0; s < n_symbols; s++) {
         for (int f = 0; f < n_features; f++) {
-            double base = states[f].mean;
-            double variation = ((s * 7 + f * 13) % 100) / 10.0 - 5.0;
+            double base                  = states[f].mean;
+            double variation             = ((s * 7 + f * 13) % 100) / 10.0 - 5.0;
             features[s * n_features + f] = base + variation;
         }
     }
 
     bench_normalize_data_t data = {
-        .z_out = z_out,
-        .states = states,
-        .features = features,
-        .n_symbols = n_symbols,
+        .z_out      = z_out,
+        .states     = states,
+        .features   = features,
+        .n_symbols  = n_symbols,
         .n_features = n_features
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = (n_symbols * n_features * 2 + n_features * 3) * sizeof(double);
-    config.min_iterations = 1000;
+    config.name              = name;
+    config.data_size         = (n_symbols * n_features * 2 + n_features * 3) * sizeof(double);
+    config.min_iterations    = 1000;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_normalize_fn, &data, &result);
@@ -122,18 +118,15 @@ typedef struct {
 } bench_update_data_t;
 
 static void bench_update_fn(void* user_data) {
-    bench_update_data_t* data = (bench_update_data_t*)user_data;
+    bench_update_data_t* data = (bench_update_data_t*) user_data;
     fc_ex_sig_normalize_update_states(
-        data->states,
-        data->features,
-        data->n_symbols,
-        data->n_features
+        data->states, data->features, data->n_symbols, data->n_features
     );
 }
 
 static void bench_update_states_impl(size_t n_symbols, int n_features, const char* name) {
     fc_welford_state_t* states = fc_aligned_alloc(n_features * sizeof(fc_welford_state_t), 64);
-    double* features = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    double* features           = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
 
     if (!states || !features) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -149,16 +142,13 @@ static void bench_update_states_impl(size_t n_symbols, int n_features, const cha
     }
 
     bench_update_data_t data = {
-        .states = states,
-        .features = features,
-        .n_symbols = n_symbols,
-        .n_features = n_features
+        .states = states, .features = features, .n_symbols = n_symbols, .n_features = n_features
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = (n_symbols * n_features + n_features * 3) * sizeof(double);
-    config.min_iterations = 1000;
+    config.name              = name;
+    config.data_size         = (n_symbols * n_features + n_features * 3) * sizeof(double);
+    config.min_iterations    = 1000;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_update_fn, &data, &result);
@@ -192,13 +182,13 @@ static void bench_normalize_throughput(void) {
     printf("\nThroughput Measurement (element processing rate)\n");
     printf("------------------------------------------------------------\n");
 
-    const size_t n_symbols = 10000;
-    const int n_features = 100;
+    const size_t n_symbols      = 10000;
+    const int n_features        = 100;
     const size_t total_elements = n_symbols * n_features;
 
     fc_welford_state_t* states = fc_aligned_alloc(n_features * sizeof(fc_welford_state_t), 64);
-    double* features = fc_aligned_alloc(total_elements * sizeof(double), 64);
-    double* z_out = fc_aligned_alloc(total_elements * sizeof(double), 64);
+    double* features           = fc_aligned_alloc(total_elements * sizeof(double), 64);
+    double* z_out              = fc_aligned_alloc(total_elements * sizeof(double), 64);
 
     if (!states || !features || !z_out) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -207,8 +197,8 @@ static void bench_normalize_throughput(void) {
 
     for (int f = 0; f < n_features; f++) {
         states[f].count = 1000;
-        states[f].mean = 100.0;
-        states[f].m2 = 999.0 * 10.0;
+        states[f].mean  = 100.0;
+        states[f].m2    = 999.0 * 10.0;
     }
 
     for (size_t i = 0; i < total_elements; i++) {
@@ -216,23 +206,23 @@ static void bench_normalize_throughput(void) {
     }
 
     bench_normalize_data_t data = {
-        .z_out = z_out,
-        .states = states,
-        .features = features,
-        .n_symbols = n_symbols,
+        .z_out      = z_out,
+        .states     = states,
+        .features   = features,
+        .n_symbols  = n_symbols,
         .n_features = n_features
     };
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = "Normalize/Throughput/10000x100";
-    config.data_size = total_elements * 2 * sizeof(double);
-    config.min_iterations = 100;
+    config.name              = "Normalize/Throughput/10000x100";
+    config.data_size         = total_elements * 2 * sizeof(double);
+    config.min_iterations    = 100;
 
     fc_bench_result_t result;
     fc_bench_run(&config, bench_normalize_fn, &data, &result);
     fc_bench_result_print(&result);
 
-    double elements_per_sec = (double)total_elements / (result.mean_ns / 1e9);
+    double elements_per_sec = (double) total_elements / (result.mean_ns / 1e9);
     printf("  Throughput: %.2f million elements/second\n", elements_per_sec / 1e6);
 
     fc_aligned_free(states);

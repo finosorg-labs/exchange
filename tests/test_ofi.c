@@ -24,9 +24,9 @@ TEST(test_ofi_golden_4tick) {
      * Expected: ∫OFI = 1300
      */
 
-    const int n_ticks = 4;
+    const int n_ticks   = 4;
     const int n_symbols = 1;
-    const int n_levels = 1;
+    const int n_levels  = 1;
 
     double bid_p[] = {100.00, 100.00, 100.01, 100.01};
     double bid_q[] = {500.0, 800.0, 600.0, 600.0};
@@ -34,15 +34,23 @@ TEST(test_ofi_golden_4tick) {
     double ask_q[] = {400.0, 300.0, 300.0, 200.0};
 
     double level_weights[] = {1.0};
-    double ofi_series[4] = {0.0};  /* Initialize to zero */
+    double ofi_series[4]   = {0.0}; /* Initialize to zero */
 
     /* Compute OFI for each tick */
     for (int t = 1; t < n_ticks; t++) {
         fc_status_t status = fc_ex_sig_ofi_batch(
             &ofi_series[t],
-            &bid_p[t], &bid_q[t], &ask_p[t], &ask_q[t],
-            &bid_p[t-1], &bid_q[t-1], &ask_p[t-1], &ask_q[t-1],
-            level_weights, n_symbols, n_levels
+            &bid_p[t],
+            &bid_q[t],
+            &ask_p[t],
+            &ask_q[t],
+            &bid_p[t - 1],
+            &bid_q[t - 1],
+            &ask_p[t - 1],
+            &ask_q[t - 1],
+            level_weights,
+            n_symbols,
+            n_levels
         );
         FC_TEST_ASSERT_EQ(status, FC_OK);
     }
@@ -61,8 +69,8 @@ TEST(test_ofi_golden_4tick) {
 
 /* Test single level OFI with all three scenarios */
 TEST(test_ofi_three_scenarios) {
-    const int n_symbols = 3;
-    const int n_levels = 1;
+    const int n_symbols    = 3;
+    const int n_levels     = 1;
     double level_weights[] = {1.0};
     double ofi_out[3];
 
@@ -78,9 +86,17 @@ TEST(test_ofi_three_scenarios) {
 
     fc_status_t status = fc_ex_sig_ofi_batch(
         ofi_out,
-        bid_p_cur, bid_q_cur, ask_p_cur, ask_q_cur,
-        bid_p_prev, bid_q_prev, ask_p_prev, ask_q_prev,
-        level_weights, n_symbols, n_levels
+        bid_p_cur,
+        bid_q_cur,
+        ask_p_cur,
+        ask_q_cur,
+        bid_p_prev,
+        bid_q_prev,
+        ask_p_prev,
+        ask_q_prev,
+        level_weights,
+        n_symbols,
+        n_levels
     );
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
@@ -92,14 +108,14 @@ TEST(test_ofi_three_scenarios) {
 /* Test multi-level weighted OFI */
 TEST(test_ofi_multi_level_weighted) {
     const int n_symbols = 1;
-    const int n_levels = 3;
+    const int n_levels  = 3;
 
     double level_weights[] = {1.0, 0.25, 0.111111};
 
-    double bid_p_cur[]  = {100.01, 99.99, 99.98};
-    double bid_q_cur[]  = {600.0, 500.0, 400.0};
-    double ask_p_cur[]  = {100.02, 100.03, 100.04};
-    double ask_q_cur[]  = {300.0, 300.0, 300.0};
+    double bid_p_cur[] = {100.01, 99.99, 99.98};
+    double bid_q_cur[] = {600.0, 500.0, 400.0};
+    double ask_p_cur[] = {100.02, 100.03, 100.04};
+    double ask_q_cur[] = {300.0, 300.0, 300.0};
 
     double bid_p_prev[] = {100.00, 99.99, 99.98};
     double bid_q_prev[] = {500.0, 500.0, 400.0};
@@ -109,9 +125,17 @@ TEST(test_ofi_multi_level_weighted) {
     double ofi_out;
     fc_status_t status = fc_ex_sig_ofi_batch(
         &ofi_out,
-        bid_p_cur, bid_q_cur, ask_p_cur, ask_q_cur,
-        bid_p_prev, bid_q_prev, ask_p_prev, ask_q_prev,
-        level_weights, n_symbols, n_levels
+        bid_p_cur,
+        bid_q_cur,
+        ask_p_cur,
+        ask_q_cur,
+        bid_p_prev,
+        bid_q_prev,
+        ask_p_prev,
+        ask_q_prev,
+        level_weights,
+        n_symbols,
+        n_levels
     );
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
@@ -121,12 +145,9 @@ TEST(test_ofi_multi_level_weighted) {
 /* Test OFI integral with Kahan summation */
 TEST(test_ofi_integral_kahan) {
     const int n_symbols = 2;
-    const size_t T = 5;
+    const size_t T      = 5;
 
-    double ofi_series[] = {
-        100.0, -100.0, 100.0, -100.0, 100.0,
-        1e10, 1.0, 1.0, 1.0, -1e10
-    };
+    double ofi_series[] = {100.0, -100.0, 100.0, -100.0, 100.0, 1e10, 1.0, 1.0, 1.0, -1e10};
 
     double integral_out[2];
     fc_status_t status = fc_ex_sig_ofi_integral(integral_out, ofi_series, n_symbols, T);
@@ -138,14 +159,14 @@ TEST(test_ofi_integral_kahan) {
 
 /* Test edge case: zero quantities */
 TEST(test_ofi_zero_quantities) {
-    const int n_symbols = 1;
-    const int n_levels = 1;
+    const int n_symbols    = 1;
+    const int n_levels     = 1;
     double level_weights[] = {1.0};
 
-    double bid_p_cur[]  = {100.00};
-    double bid_q_cur[]  = {0.0};
-    double ask_p_cur[]  = {100.01};
-    double ask_q_cur[]  = {0.0};
+    double bid_p_cur[] = {100.00};
+    double bid_q_cur[] = {0.0};
+    double ask_p_cur[] = {100.01};
+    double ask_q_cur[] = {0.0};
 
     double bid_p_prev[] = {100.00};
     double bid_q_prev[] = {500.0};
@@ -155,9 +176,17 @@ TEST(test_ofi_zero_quantities) {
     double ofi_out;
     fc_status_t status = fc_ex_sig_ofi_batch(
         &ofi_out,
-        bid_p_cur, bid_q_cur, ask_p_cur, ask_q_cur,
-        bid_p_prev, bid_q_prev, ask_p_prev, ask_q_prev,
-        level_weights, n_symbols, n_levels
+        bid_p_cur,
+        bid_q_cur,
+        ask_p_cur,
+        ask_q_cur,
+        bid_p_prev,
+        bid_q_prev,
+        ask_p_prev,
+        ask_q_prev,
+        level_weights,
+        n_symbols,
+        n_levels
     );
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
@@ -211,26 +240,37 @@ TEST(test_ofi_integral_invalid_args) {
 
 /* Test large batch */
 TEST(test_ofi_large_batch) {
-    const int n_symbols = 100;
-    const int n_levels = 5;
+    const int n_symbols    = 100;
+    const int n_levels     = 5;
     double level_weights[] = {1.0, 0.25, 0.111111, 0.0625, 0.04};
 
-    double* bid_p_cur = malloc(n_symbols * n_levels * sizeof(double));
-    double* bid_q_cur = malloc(n_symbols * n_levels * sizeof(double));
-    double* ask_p_cur = malloc(n_symbols * n_levels * sizeof(double));
-    double* ask_q_cur = malloc(n_symbols * n_levels * sizeof(double));
+    double* bid_p_cur  = malloc(n_symbols * n_levels * sizeof(double));
+    double* bid_q_cur  = malloc(n_symbols * n_levels * sizeof(double));
+    double* ask_p_cur  = malloc(n_symbols * n_levels * sizeof(double));
+    double* ask_q_cur  = malloc(n_symbols * n_levels * sizeof(double));
     double* bid_p_prev = malloc(n_symbols * n_levels * sizeof(double));
     double* bid_q_prev = malloc(n_symbols * n_levels * sizeof(double));
     double* ask_p_prev = malloc(n_symbols * n_levels * sizeof(double));
     double* ask_q_prev = malloc(n_symbols * n_levels * sizeof(double));
-    double* ofi_out = malloc(n_symbols * sizeof(double));
+    double* ofi_out    = malloc(n_symbols * sizeof(double));
 
-    FC_TEST_ASSERT_NOT_NULL(bid_p_cur);
-    FC_TEST_ASSERT_NOT_NULL(ofi_out);
+    if (!bid_p_cur || !bid_q_cur || !ask_p_cur || !ask_q_cur || !bid_p_prev || !bid_q_prev ||
+        !ask_p_prev || !ask_q_prev || !ofi_out) {
+        free(bid_p_cur);
+        free(bid_q_cur);
+        free(ask_p_cur);
+        free(ask_q_cur);
+        free(bid_p_prev);
+        free(bid_q_prev);
+        free(ask_p_prev);
+        free(ask_q_prev);
+        free(ofi_out);
+        FC_TEST_ASSERT_NOT_NULL(NULL);
+    }
 
     for (int sym = 0; sym < n_symbols; sym++) {
         for (int lv = 0; lv < n_levels; lv++) {
-            int idx = sym * n_levels + lv;
+            int idx           = sym * n_levels + lv;
             double base_price = 100.0 + sym;
 
             bid_p_prev[idx] = base_price - lv * 0.01;
@@ -247,9 +287,17 @@ TEST(test_ofi_large_batch) {
 
     fc_status_t status = fc_ex_sig_ofi_batch(
         ofi_out,
-        bid_p_cur, bid_q_cur, ask_p_cur, ask_q_cur,
-        bid_p_prev, bid_q_prev, ask_p_prev, ask_q_prev,
-        level_weights, n_symbols, n_levels
+        bid_p_cur,
+        bid_q_cur,
+        ask_p_cur,
+        ask_q_cur,
+        bid_p_prev,
+        bid_q_prev,
+        ask_p_prev,
+        ask_q_prev,
+        level_weights,
+        n_symbols,
+        n_levels
     );
 
     FC_TEST_ASSERT_EQ(status, FC_OK);

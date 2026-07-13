@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_SYMBOLS_SMALL 100
+#define NUM_SYMBOLS_SMALL  100
 #define NUM_SYMBOLS_MEDIUM 1000
-#define NUM_SYMBOLS_LARGE 5000
+#define NUM_SYMBOLS_LARGE  5000
 
 static double* generate_mid_prices(size_t n) {
     double* prices = (double*) malloc(n * sizeof(double));
@@ -117,15 +117,15 @@ static void bench_optimal_spread_func(void* user_data) {
 
 static void run_benchmark_for_size(size_t n, const char* size_label) {
     bench_data_t data;
-    data.n = n;
-    data.mid_prices = generate_mid_prices(n);
-    data.inventories = generate_inventories(n);
-    data.volatilities = generate_volatilities(n);
+    data.n             = n;
+    data.mid_prices    = generate_mid_prices(n);
+    data.inventories   = generate_inventories(n);
+    data.volatilities  = generate_volatilities(n);
     data.arrival_rates = generate_arrival_rates(n);
-    data.bid_prices = (double*) malloc(n * sizeof(double));
-    data.ask_prices = (double*) malloc(n * sizeof(double));
+    data.bid_prices    = (double*) malloc(n * sizeof(double));
+    data.ask_prices    = (double*) malloc(n * sizeof(double));
     data.risk_aversion = 0.1;
-    data.time_horizon = 1.0;
+    data.time_horizon  = 1.0;
 
     if (!data.mid_prices || !data.inventories || !data.volatilities || !data.arrival_rates ||
         !data.bid_prices || !data.ask_prices) {
@@ -137,21 +137,21 @@ static void run_benchmark_for_size(size_t n, const char* size_label) {
 
     snprintf(bench_name, sizeof(bench_name), "market_maker_quotes_%s", size_label);
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = bench_name;
-    config.data_size = n * sizeof(double) * 6;
-    config.min_time_ms = 200.0;
+    config.name              = bench_name;
+    config.data_size         = n * sizeof(double) * 6;
+    config.min_time_ms       = 200.0;
     fc_bench_result_t result;
     fc_bench_run(&config, bench_market_maker_quotes_func, &data, &result);
     fc_bench_result_print(&result);
 
     snprintf(bench_name, sizeof(bench_name), "reservation_price_%s", size_label);
-    config.name = bench_name;
+    config.name      = bench_name;
     config.data_size = n * sizeof(double) * 4;
     fc_bench_run(&config, bench_reservation_price_func, &data, &result);
     fc_bench_result_print(&result);
 
     snprintf(bench_name, sizeof(bench_name), "optimal_spread_%s", size_label);
-    config.name = bench_name;
+    config.name      = bench_name;
     config.data_size = n * sizeof(double) * 3;
     fc_bench_run(&config, bench_optimal_spread_func, &data, &result);
     fc_bench_result_print(&result);
@@ -179,27 +179,27 @@ static void bench_market_maker_quotes_large(void) {
 
 static void bench_market_maker_quotes_single(void) {
     bench_data_t data;
-    data.n = 1;
-    double mid_price = 100.0;
-    double inventory = 10.0;
-    double volatility = 0.02;
+    data.n              = 1;
+    double mid_price    = 100.0;
+    double inventory    = 10.0;
+    double volatility   = 0.02;
     double arrival_rate = 10.0;
     double bid_price, ask_price;
 
-    data.mid_prices = &mid_price;
-    data.inventories = &inventory;
-    data.volatilities = &volatility;
+    data.mid_prices    = &mid_price;
+    data.inventories   = &inventory;
+    data.volatilities  = &volatility;
     data.arrival_rates = &arrival_rate;
-    data.bid_prices = &bid_price;
-    data.ask_prices = &ask_price;
+    data.bid_prices    = &bid_price;
+    data.ask_prices    = &ask_price;
     data.risk_aversion = 0.1;
-    data.time_horizon = 1.0;
+    data.time_horizon  = 1.0;
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = "market_maker_quotes_single_symbol";
-    config.data_size = sizeof(double) * 6;
-    config.min_time_ms = 200.0;
-    config.min_iterations = 100;
+    config.name              = "market_maker_quotes_single_symbol";
+    config.data_size         = sizeof(double) * 6;
+    config.min_time_ms       = 200.0;
+    config.min_iterations    = 100;
     fc_bench_result_t result;
     fc_bench_run(&config, bench_market_maker_quotes_func, &data, &result);
     fc_bench_result_print(&result);

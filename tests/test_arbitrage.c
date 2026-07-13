@@ -9,12 +9,12 @@
  * - Numerical accuracy
  */
 
+#include "mem_aligned.h"
 #include "signal/arbitrage.h"
 #include "test_framework.h"
-#include "mem_aligned.h"
+#include <float.h>
 #include <math.h>
 #include <string.h>
-#include <float.h>
 
 /* Test basic 2-market arbitrage opportunity */
 TEST(test_arb_basic_2_markets) {
@@ -22,23 +22,18 @@ TEST(test_arb_basic_2_markets) {
 
     double best_bid[] = {100.50, 100.45};
     double best_ask[] = {100.51, 100.46};
-    double fees[] = {0.01, 0.01};
+    double fees[]     = {0.01, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
     /* Diagonal elements should be NaN (same-market arbitrage is meaningless) */
     FC_TEST_ASSERT(isnan(spread_out[0]));
 
-    /* spread[0][1] = 100.50 - 100.46 - 0.01 - 0.01 = 0.02 (arb: buy at market 1, sell at market 0) */
+    /* spread[0][1] = 100.50 - 100.46 - 0.01 - 0.01 = 0.02 (arb: buy at market 1, sell at market 0)
+     */
     FC_TEST_ASSERT_DOUBLE_EQ(spread_out[1], 0.02, 1e-10);
 
     /* spread[1][0] = 100.45 - 100.51 - 0.01 - 0.01 = -0.08 (no arb) */
@@ -55,16 +50,10 @@ TEST(test_arb_multi_market) {
     /* Venue 0: NYSE, Venue 1: NASDAQ, Venue 2: BATS, Venue 3: IEX */
     double best_bid[] = {100.50, 100.52, 100.48, 100.49};
     double best_ask[] = {100.51, 100.53, 100.49, 100.50};
-    double fees[] = {0.01, 0.015, 0.005, 0.008};
+    double fees[]     = {0.01, 0.015, 0.005, 0.008};
     double spread_out[16];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -101,16 +90,10 @@ TEST(test_arb_single_market) {
 
     double best_bid[] = {100.50};
     double best_ask[] = {100.51};
-    double fees[] = {0.01};
+    double fees[]     = {0.01};
     double spread_out[1];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -131,16 +114,10 @@ TEST(test_arb_large_markets) {
     for (int i = 0; i < n_markets; i++) {
         best_bid[i] = 100.0 + i * 0.1;
         best_ask[i] = 100.1 + i * 0.1;
-        fees[i] = 0.01 + i * 0.001;
+        fees[i]     = 0.01 + i * 0.001;
     }
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -172,16 +149,10 @@ TEST(test_arb_zero_fees) {
 
     double best_bid[] = {100.50, 100.45};
     double best_ask[] = {100.51, 100.46};
-    double fees[] = {0.0, 0.0};
+    double fees[]     = {0.0, 0.0};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -195,16 +166,10 @@ TEST(test_arb_high_fees) {
 
     double best_bid[] = {100.50, 100.45};
     double best_ask[] = {100.51, 100.46};
-    double fees[] = {0.10, 0.10};
+    double fees[]     = {0.10, 0.10};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -224,7 +189,7 @@ TEST(test_arb_high_fees) {
 /* Test NULL pointer validation */
 TEST(test_arb_null_pointers) {
     const int n_markets = 2;
-    double data[10] = {0};
+    double data[10]     = {0};
 
     fc_status_t status;
 
@@ -266,16 +231,10 @@ TEST(test_arb_crypto_exchanges) {
     /* Binance, OKX, Deribit */
     double best_bid[] = {50000.50, 50001.00, 49999.80};
     double best_ask[] = {50000.60, 50001.10, 49999.90};
-    double fees[] = {5.0, 4.5, 6.0};  /* Absolute fees in USD */
+    double fees[]     = {5.0, 4.5, 6.0}; /* Absolute fees in USD */
     double spread_out[9];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -291,16 +250,10 @@ TEST(test_arb_asymmetry) {
 
     double best_bid[] = {100.50, 100.52, 100.48};
     double best_ask[] = {100.51, 100.53, 100.49};
-    double fees[] = {0.01, 0.02, 0.015};
+    double fees[]     = {0.01, 0.02, 0.015};
     double spread_out[9];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -322,9 +275,9 @@ TEST(test_arb_asymmetry) {
 TEST(test_arb_aligned_variant) {
     const int n_markets = 8;
 
-    double* best_bid = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* best_ask = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* fees = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* best_bid   = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* best_ask   = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* fees       = fc_aligned_alloc(n_markets * sizeof(double), 64);
     double* spread_out = fc_aligned_alloc(n_markets * n_markets * sizeof(double), 64);
 
     FC_TEST_ASSERT(best_bid && best_ask && fees && spread_out);
@@ -333,16 +286,11 @@ TEST(test_arb_aligned_variant) {
     for (int i = 0; i < n_markets; i++) {
         best_bid[i] = 100.0 + i * 0.1;
         best_ask[i] = 100.1 + i * 0.1;
-        fees[i] = 0.01;
+        fees[i]     = 0.01;
     }
 
-    fc_status_t status = fc_ex_sig_arb_spread_aligned(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status =
+        fc_ex_sig_arb_spread_aligned(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -364,10 +312,10 @@ TEST(test_arb_aligned_variant) {
 TEST(test_arb_aligned_vs_unaligned) {
     const int n_markets = 16;
 
-    double* best_bid = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* best_ask = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* fees = fc_aligned_alloc(n_markets * sizeof(double), 64);
-    double* spread_aligned = fc_aligned_alloc(n_markets * n_markets * sizeof(double), 64);
+    double* best_bid         = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* best_ask         = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* fees             = fc_aligned_alloc(n_markets * sizeof(double), 64);
+    double* spread_aligned   = fc_aligned_alloc(n_markets * n_markets * sizeof(double), 64);
     double* spread_unaligned = fc_aligned_alloc(n_markets * n_markets * sizeof(double), 64);
 
     FC_TEST_ASSERT(best_bid && best_ask && fees && spread_aligned && spread_unaligned);
@@ -376,24 +324,14 @@ TEST(test_arb_aligned_vs_unaligned) {
     for (int i = 0; i < n_markets; i++) {
         best_bid[i] = 100.0 + i * 0.05 + (i % 3) * 0.01;
         best_ask[i] = 100.01 + i * 0.05 + (i % 5) * 0.01;
-        fees[i] = 0.01 + (i % 7) * 0.001;
+        fees[i]     = 0.01 + (i % 7) * 0.001;
     }
 
-    fc_status_t status1 = fc_ex_sig_arb_spread_aligned(
-        spread_aligned,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status1 =
+        fc_ex_sig_arb_spread_aligned(spread_aligned, best_bid, best_ask, fees, n_markets);
 
-    fc_status_t status2 = fc_ex_sig_arb_spread(
-        spread_unaligned,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status2 =
+        fc_ex_sig_arb_spread(spread_unaligned, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status1, FC_OK);
     FC_TEST_ASSERT_EQ(status2, FC_OK);
@@ -420,16 +358,11 @@ TEST(test_arb_fee_pct_to_abs) {
 
     double best_bid[] = {100.0, 200.0, 50.0};
     double best_ask[] = {100.1, 200.2, 50.05};
-    double fee_pct[] = {0.1, 0.05, 0.2};  /* 0.1%, 0.05%, 0.2% */
+    double fee_pct[]  = {0.1, 0.05, 0.2}; /* 0.1%, 0.05%, 0.2% */
     double fees_out[3];
 
-    fc_status_t status = fc_ex_sig_arb_fee_pct_to_abs(
-        fees_out,
-        best_bid,
-        best_ask,
-        fee_pct,
-        n_markets
-    );
+    fc_status_t status =
+        fc_ex_sig_arb_fee_pct_to_abs(fees_out, best_bid, best_ask, fee_pct, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -470,28 +403,17 @@ TEST(test_arb_with_percentage_fees) {
 
     double best_bid[] = {100.0, 100.5};
     double best_ask[] = {100.1, 100.6};
-    double fee_pct[] = {0.1, 0.1};  /* Both 0.1% */
+    double fee_pct[]  = {0.1, 0.1}; /* Both 0.1% */
     double fees[2];
     double spread_out[4];
 
     /* Convert percentage fees to absolute */
-    fc_status_t status1 = fc_ex_sig_arb_fee_pct_to_abs(
-        fees,
-        best_bid,
-        best_ask,
-        fee_pct,
-        n_markets
-    );
+    fc_status_t status1 =
+        fc_ex_sig_arb_fee_pct_to_abs(fees, best_bid, best_ask, fee_pct, n_markets);
     FC_TEST_ASSERT_EQ(status1, FC_OK);
 
     /* Calculate arbitrage spreads */
-    fc_status_t status2 = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status2 = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
     FC_TEST_ASSERT_EQ(status2, FC_OK);
 
     /* Verify spread calculation with converted fees */
@@ -507,22 +429,16 @@ TEST(test_arb_nan_input) {
 
     double best_bid[] = {NAN, 100.5};
     double best_ask[] = {100.1, 100.6};
-    double fees[] = {0.01, 0.01};
+    double fees[]     = {0.01, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
     /* All diagonal elements are always NaN */
-    FC_TEST_ASSERT(isnan(spread_out[0]));  /* [0][0] diagonal */
-    FC_TEST_ASSERT(isnan(spread_out[3]));  /* [1][1] diagonal */
+    FC_TEST_ASSERT(isnan(spread_out[0])); /* [0][0] diagonal */
+    FC_TEST_ASSERT(isnan(spread_out[3])); /* [1][1] diagonal */
 
     /* spread[0][1] = NaN - 100.6 - 0.01 - 0.01 = NaN (NaN propagates) */
     FC_TEST_ASSERT(isnan(spread_out[1]));
@@ -537,22 +453,16 @@ TEST(test_arb_inf_input) {
 
     double best_bid[] = {INFINITY, 100.5};
     double best_ask[] = {100.1, 100.6};
-    double fees[] = {0.01, 0.01};
+    double fees[]     = {0.01, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
     /* Diagonal elements are always NaN */
-    FC_TEST_ASSERT(isnan(spread_out[0]));  /* [0][0] diagonal */
-    FC_TEST_ASSERT(isnan(spread_out[3]));  /* [1][1] diagonal */
+    FC_TEST_ASSERT(isnan(spread_out[0])); /* [0][0] diagonal */
+    FC_TEST_ASSERT(isnan(spread_out[3])); /* [1][1] diagonal */
 
     /* spread[0][1] = Inf - 100.6 - 0.01 - 0.01 = Inf */
     FC_TEST_ASSERT(isinf(spread_out[1]) && spread_out[1] > 0);
@@ -566,19 +476,13 @@ TEST(test_arb_denormal_values) {
     const int n_markets = 2;
 
     /* Denormal numbers (smaller than DBL_MIN normalized) */
-    double denormal = 1e-320;  /* Much smaller than DBL_MIN ~2.2e-308 */
+    double denormal   = 1e-320; /* Much smaller than DBL_MIN ~2.2e-308 */
     double best_bid[] = {denormal, 100.5};
     double best_ask[] = {denormal * 1.1, 100.6};
-    double fees[] = {denormal * 0.1, 0.01};
+    double fees[]     = {denormal * 0.1, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -597,24 +501,18 @@ TEST(test_arb_extreme_values) {
 
     double best_bid[] = {DBL_MAX * 0.5, 100.0};
     double best_ask[] = {DBL_MAX * 0.5 + 1.0, 100.1};
-    double fees[] = {1.0, 0.01};
+    double fees[]     = {1.0, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
     /* Verify computation doesn't overflow or produce undefined behavior */
     /* spread[0][1] = DBL_MAX*0.5 - 100.1 - 1.0 - 0.01 ≈ DBL_MAX*0.5 - 101.11 */
-    FC_TEST_ASSERT(!isnan(spread_out[1]) || isnan(spread_out[0]));  /* Either valid or diagonal */
-    FC_TEST_ASSERT(isnan(spread_out[0]));  /* Diagonal */
-    FC_TEST_ASSERT(isnan(spread_out[3]));  /* Diagonal */
+    FC_TEST_ASSERT(!isnan(spread_out[1]) || isnan(spread_out[0])); /* Either valid or diagonal */
+    FC_TEST_ASSERT(isnan(spread_out[0]));                          /* Diagonal */
+    FC_TEST_ASSERT(isnan(spread_out[3]));                          /* Diagonal */
 }
 
 /* Test negative prices (invalid but should handle gracefully) */
@@ -623,16 +521,10 @@ TEST(test_arb_negative_prices) {
 
     double best_bid[] = {-100.0, 100.5};
     double best_ask[] = {-99.9, 100.6};
-    double fees[] = {0.01, 0.01};
+    double fees[]     = {0.01, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -651,16 +543,10 @@ TEST(test_arb_zero_prices) {
 
     double best_bid[] = {0.0, 100.5};
     double best_ask[] = {0.0, 100.6};
-    double fees[] = {0.0, 0.01};
+    double fees[]     = {0.0, 0.01};
     double spread_out[4];
 
-    fc_status_t status = fc_ex_sig_arb_spread(
-        spread_out,
-        best_bid,
-        best_ask,
-        fees,
-        n_markets
-    );
+    fc_status_t status = fc_ex_sig_arb_spread(spread_out, best_bid, best_ask, fees, n_markets);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 

@@ -27,6 +27,7 @@ add_executable(exchange_tests
     test_latency_arb.c
     test_index_rebal.c
     test_delta_hedge.c
+    test_marginal_var.c
 )
 
 # Link with exchange library

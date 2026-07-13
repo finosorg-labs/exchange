@@ -3,9 +3,9 @@
  * @brief Unit tests for latency arbitrage strategy
  */
 
-#include "test_framework.h"
-#include "strategy/latency_arb.h"
 #include "platform.h"
+#include "strategy/latency_arb.h"
+#include "test_framework.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,15 +14,15 @@
 #define EPSILON 1e-9
 
 TEST(test_latarb_calibrate_perfect_linear) {
-    const size_t n_pairs = 2;
-    const size_t window = 100;
+    const size_t n_pairs  = 2;
+    const size_t window   = 100;
     const double true_a_0 = 1.2;
     const double true_b_0 = 5.0;
     const double true_a_1 = 0.8;
     const double true_b_1 = -3.0;
 
-    double* hist_fast = (double*)malloc(n_pairs * window * sizeof(double));
-    double* hist_slow = (double*)malloc(n_pairs * window * sizeof(double));
+    double* hist_fast = (double*) malloc(n_pairs * window * sizeof(double));
+    double* hist_slow = (double*) malloc(n_pairs * window * sizeof(double));
     double coef_a_out[2];
     double coef_b_out[2];
 
@@ -34,14 +34,8 @@ TEST(test_latarb_calibrate_perfect_linear) {
         hist_slow[1 * window + i] = true_a_1 * hist_fast[1 * window + i] + true_b_1;
     }
 
-    fc_status_t status = fc_ex_strat_latarb_calibrate(
-        coef_a_out,
-        coef_b_out,
-        hist_fast,
-        hist_slow,
-        n_pairs,
-        window
-    );
+    fc_status_t status =
+        fc_ex_strat_latarb_calibrate(coef_a_out, coef_b_out, hist_fast, hist_slow, n_pairs, window);
     ASSERT_EQ(status, FC_OK);
 
     FC_TEST_ASSERT_DOUBLE_EQ(coef_a_out[0], true_a_0, 0.001);
@@ -55,12 +49,12 @@ TEST(test_latarb_calibrate_perfect_linear) {
 
 TEST(test_latarb_calibrate_with_noise) {
     const size_t n_pairs = 1;
-    const size_t window = 200;
-    const double true_a = 1.1;
-    const double true_b = 2.5;
+    const size_t window  = 200;
+    const double true_a  = 1.1;
+    const double true_b  = 2.5;
 
-    double* hist_fast = (double*)malloc(window * sizeof(double));
-    double* hist_slow = (double*)malloc(window * sizeof(double));
+    double* hist_fast = (double*) malloc(window * sizeof(double));
+    double* hist_slow = (double*) malloc(window * sizeof(double));
     double coef_a_out[1];
     double coef_b_out[1];
 
@@ -71,14 +65,8 @@ TEST(test_latarb_calibrate_with_noise) {
         hist_slow[i] = true_a * hist_fast[i] + true_b + noise;
     }
 
-    fc_status_t status = fc_ex_strat_latarb_calibrate(
-        coef_a_out,
-        coef_b_out,
-        hist_fast,
-        hist_slow,
-        n_pairs,
-        window
-    );
+    fc_status_t status =
+        fc_ex_strat_latarb_calibrate(coef_a_out, coef_b_out, hist_fast, hist_slow, n_pairs, window);
     ASSERT_EQ(status, FC_OK);
 
     FC_TEST_ASSERT_DOUBLE_EQ(coef_a_out[0], true_a, 0.01);
@@ -128,37 +116,30 @@ TEST(test_latarb_signal_basic) {
 
     double price_fast[] = {100.0, 200.0, 150.0};
     double price_slow[] = {125.0, 245.0, 182.0};
-    double coef_a[] = {1.2, 1.2, 1.2};
-    double coef_b[] = {5.0, 5.0, 5.0};
-    double theta[] = {2.0, 2.0, 2.0};
+    double coef_a[]     = {1.2, 1.2, 1.2};
+    double coef_b[]     = {5.0, 5.0, 5.0};
+    double theta[]      = {2.0, 2.0, 2.0};
 
     double dev_out[3];
     int hit_out[3];
 
     fc_status_t status = fc_ex_strat_latarb_signal(
-        dev_out,
-        hit_out,
-        price_fast,
-        price_slow,
-        coef_a,
-        coef_b,
-        theta,
-        n
+        dev_out, hit_out, price_fast, price_slow, coef_a, coef_b, theta, n
     );
     ASSERT_EQ(status, FC_OK);
 
     double expected_pred_0 = 1.2 * 100.0 + 5.0;
-    double expected_dev_0 = 125.0 - expected_pred_0;
+    double expected_dev_0  = 125.0 - expected_pred_0;
     FC_TEST_ASSERT_DOUBLE_EQ(dev_out[0], expected_dev_0, EPSILON);
     ASSERT_EQ(hit_out[0], (fabs(expected_dev_0) > 2.0) ? 1 : 0);
 
     double expected_pred_1 = 1.2 * 200.0 + 5.0;
-    double expected_dev_1 = 245.0 - expected_pred_1;
+    double expected_dev_1  = 245.0 - expected_pred_1;
     FC_TEST_ASSERT_DOUBLE_EQ(dev_out[1], expected_dev_1, EPSILON);
     ASSERT_EQ(hit_out[1], (fabs(expected_dev_1) > 2.0) ? 1 : 0);
 
     double expected_pred_2 = 1.2 * 150.0 + 5.0;
-    double expected_dev_2 = 182.0 - expected_pred_2;
+    double expected_dev_2  = 182.0 - expected_pred_2;
     FC_TEST_ASSERT_DOUBLE_EQ(dev_out[2], expected_dev_2, EPSILON);
     ASSERT_EQ(hit_out[2], (fabs(expected_dev_2) > 2.0) ? 1 : 0);
 }
@@ -168,22 +149,15 @@ TEST(test_latarb_signal_threshold) {
 
     double price_fast[] = {100.0, 100.0, 100.0, 100.0};
     double price_slow[] = {123.0, 122.5, 122.0, 121.0};
-    double coef_a[] = {1.2, 1.2, 1.2, 1.2};
-    double coef_b[] = {2.0, 2.0, 2.0, 2.0};
-    double theta[] = {1.0, 0.5, 0.1, 0.0};
+    double coef_a[]     = {1.2, 1.2, 1.2, 1.2};
+    double coef_b[]     = {2.0, 2.0, 2.0, 2.0};
+    double theta[]      = {1.0, 0.5, 0.1, 0.0};
 
     double dev_out[4];
     int hit_out[4];
 
     fc_status_t status = fc_ex_strat_latarb_signal(
-        dev_out,
-        hit_out,
-        price_fast,
-        price_slow,
-        coef_a,
-        coef_b,
-        theta,
-        n
+        dev_out, hit_out, price_fast, price_slow, coef_a, coef_b, theta, n
     );
     ASSERT_EQ(status, FC_OK);
 
@@ -204,22 +178,15 @@ TEST(test_latarb_signal_nan_handling) {
 
     double price_fast[] = {100.0, NAN, 150.0};
     double price_slow[] = {125.0, 245.0, NAN};
-    double coef_a[] = {1.2, 1.2, 1.2};
-    double coef_b[] = {5.0, 5.0, 5.0};
-    double theta[] = {2.0, 2.0, 2.0};
+    double coef_a[]     = {1.2, 1.2, 1.2};
+    double coef_b[]     = {5.0, 5.0, 5.0};
+    double theta[]      = {2.0, 2.0, 2.0};
 
     double dev_out[3];
     int hit_out[3];
 
     fc_status_t status = fc_ex_strat_latarb_signal(
-        dev_out,
-        hit_out,
-        price_fast,
-        price_slow,
-        coef_a,
-        coef_b,
-        theta,
-        n
+        dev_out, hit_out, price_fast, price_slow, coef_a, coef_b, theta, n
     );
     ASSERT_EQ(status, FC_OK);
 
@@ -233,64 +200,65 @@ TEST(test_latarb_signal_nan_handling) {
 TEST(test_latarb_signal_null_args) {
     double price_fast[3] = {100.0, 200.0, 150.0};
     double price_slow[3] = {125.0, 245.0, 182.0};
-    double coef_a[3] = {1.2, 1.2, 1.2};
-    double coef_b[3] = {5.0, 5.0, 5.0};
-    double theta[3] = {2.0, 2.0, 2.0};
+    double coef_a[3]     = {1.2, 1.2, 1.2};
+    double coef_b[3]     = {5.0, 5.0, 5.0};
+    double theta[3]      = {2.0, 2.0, 2.0};
     double dev_out[3];
     int hit_out[3];
 
-    fc_status_t status = fc_ex_strat_latarb_signal(NULL, hit_out, price_fast, price_slow, coef_a, coef_b, theta, 3);
+    fc_status_t status =
+        fc_ex_strat_latarb_signal(NULL, hit_out, price_fast, price_slow, coef_a, coef_b, theta, 3);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
-    status = fc_ex_strat_latarb_signal(dev_out, NULL, price_fast, price_slow, coef_a, coef_b, theta, 3);
+    status =
+        fc_ex_strat_latarb_signal(dev_out, NULL, price_fast, price_slow, coef_a, coef_b, theta, 3);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
-    status = fc_ex_strat_latarb_signal(dev_out, hit_out, NULL, price_slow, coef_a, coef_b, theta, 3);
+    status =
+        fc_ex_strat_latarb_signal(dev_out, hit_out, NULL, price_slow, coef_a, coef_b, theta, 3);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
-    status = fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, NULL, coef_a, coef_b, theta, 3);
+    status =
+        fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, NULL, coef_a, coef_b, theta, 3);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
-    status = fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, price_slow, NULL, coef_b, theta, 3);
+    status =
+        fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, price_slow, NULL, coef_b, theta, 3);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
-    status = fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, price_slow, coef_a, NULL, theta, 3);
+    status =
+        fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, price_slow, coef_a, NULL, theta, 3);
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
-    status = fc_ex_strat_latarb_signal(dev_out, hit_out, price_fast, price_slow, coef_a, coef_b, NULL, 3);
+    status = fc_ex_strat_latarb_signal(
+        dev_out, hit_out, price_fast, price_slow, coef_a, coef_b, NULL, 3
+    );
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 }
 
 TEST(test_latarb_signal_zero_size) {
     double price_fast[1] = {100.0};
     double price_slow[1] = {125.0};
-    double coef_a[1] = {1.2};
-    double coef_b[1] = {5.0};
-    double theta[1] = {2.0};
+    double coef_a[1]     = {1.2};
+    double coef_b[1]     = {5.0};
+    double theta[1]      = {2.0};
     double dev_out[1];
     int hit_out[1];
 
     fc_status_t status = fc_ex_strat_latarb_signal(
-        dev_out,
-        hit_out,
-        price_fast,
-        price_slow,
-        coef_a,
-        coef_b,
-        theta,
-        0
+        dev_out, hit_out, price_fast, price_slow, coef_a, coef_b, theta, 0
     );
     ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 }
 
 TEST(test_latarb_calibrate_batch) {
     const size_t n_pairs = 100;
-    const size_t window = 50;
+    const size_t window  = 50;
 
-    double* hist_fast = (double*)malloc(n_pairs * window * sizeof(double));
-    double* hist_slow = (double*)malloc(n_pairs * window * sizeof(double));
-    double* coef_a_out = (double*)malloc(n_pairs * sizeof(double));
-    double* coef_b_out = (double*)malloc(n_pairs * sizeof(double));
+    double* hist_fast  = (double*) malloc(n_pairs * window * sizeof(double));
+    double* hist_slow  = (double*) malloc(n_pairs * window * sizeof(double));
+    double* coef_a_out = (double*) malloc(n_pairs * sizeof(double));
+    double* coef_b_out = (double*) malloc(n_pairs * sizeof(double));
 
     for (size_t i = 0; i < n_pairs; i++) {
         double true_a = 1.0 + 0.01 * i;
@@ -302,14 +270,8 @@ TEST(test_latarb_calibrate_batch) {
         }
     }
 
-    fc_status_t status = fc_ex_strat_latarb_calibrate(
-        coef_a_out,
-        coef_b_out,
-        hist_fast,
-        hist_slow,
-        n_pairs,
-        window
-    );
+    fc_status_t status =
+        fc_ex_strat_latarb_calibrate(coef_a_out, coef_b_out, hist_fast, hist_slow, n_pairs, window);
     ASSERT_EQ(status, FC_OK);
 
     for (size_t i = 0; i < n_pairs; i++) {

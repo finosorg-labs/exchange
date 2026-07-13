@@ -10,17 +10,17 @@
  * - State update correctness
  */
 
+#include "mem_aligned.h"
 #include "signal/normalize.h"
 #include "test_framework.h"
-#include "mem_aligned.h"
+#include <float.h>
 #include <math.h>
 #include <string.h>
-#include <float.h>
 
 /* Test basic z-score normalization with single feature */
 TEST(test_normalize_basic_single_feature) {
-    const size_t n_symbols  = 3;
-    const int n_features    = 1;
+    const size_t n_symbols = 3;
+    const int n_features   = 1;
 
     /* Setup Welford state: mean=10.0, stddev=2.0 (based on 100 samples) */
     fc_welford_state_t states[1];
@@ -32,13 +32,7 @@ TEST(test_normalize_basic_single_feature) {
     double features[] = {8.0, 10.0, 12.0};
     double z_out[3];
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -50,8 +44,8 @@ TEST(test_normalize_basic_single_feature) {
 
 /* Test multi-dimensional feature normalization */
 TEST(test_normalize_multi_feature) {
-    const size_t n_symbols  = 2;
-    const int n_features    = 3;
+    const size_t n_symbols = 2;
+    const int n_features   = 3;
 
     /* Setup Welford states for 3 features */
     fc_welford_state_t states[3];
@@ -76,18 +70,16 @@ TEST(test_normalize_multi_feature) {
      * Symbol 1: [90, -2, 45]
      */
     double features[] = {
-        110.0, 1.0, 55.0,  /* Symbol 0 */
-        90.0, -2.0, 45.0   /* Symbol 1 */
+        110.0,
+        1.0,
+        55.0, /* Symbol 0 */
+        90.0,
+        -2.0,
+        45.0 /* Symbol 1 */
     };
     double z_out[6];
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -105,8 +97,8 @@ TEST(test_normalize_multi_feature) {
 
 /* Test zero standard deviation (all values identical) */
 TEST(test_normalize_zero_stddev) {
-    const size_t n_symbols  = 3;
-    const int n_features    = 1;
+    const size_t n_symbols = 3;
+    const int n_features   = 1;
 
     /* Setup Welford state with zero variance (all values = 42.0) */
     fc_welford_state_t states[1];
@@ -117,13 +109,7 @@ TEST(test_normalize_zero_stddev) {
     double features[] = {40.0, 42.0, 44.0};
     double z_out[3];
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -135,8 +121,8 @@ TEST(test_normalize_zero_stddev) {
 
 /* Test insufficient data (count < 2) */
 TEST(test_normalize_insufficient_data) {
-    const size_t n_symbols  = 2;
-    const int n_features    = 1;
+    const size_t n_symbols = 2;
+    const int n_features   = 1;
 
     /* Setup Welford state with only 1 sample (insufficient for stddev) */
     fc_welford_state_t states[1];
@@ -147,13 +133,7 @@ TEST(test_normalize_insufficient_data) {
     double features[] = {8.0, 12.0};
     double z_out[2];
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -172,33 +152,15 @@ TEST(test_normalize_null_pointers) {
     fc_welford_init(&states[0]);
 
     /* NULL z_out */
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        NULL,
-        states,
-        features,
-        1,
-        1
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(NULL, states, features, 1, 1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
     /* NULL states */
-    status = fc_ex_sig_normalize_zscore(
-        z_out,
-        NULL,
-        features,
-        1,
-        1
-    );
+    status = fc_ex_sig_normalize_zscore(z_out, NULL, features, 1, 1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
     /* NULL features */
-    status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        NULL,
-        1,
-        1
-    );
+    status = fc_ex_sig_normalize_zscore(z_out, states, NULL, 1, 1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 }
 
@@ -212,40 +174,22 @@ TEST(test_normalize_invalid_dimensions) {
     fc_welford_init(&states[0]);
 
     /* Zero symbols */
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        0,
-        1
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, 0, 1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
     /* Zero features */
-    status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        1,
-        0
-    );
+    status = fc_ex_sig_normalize_zscore(z_out, states, features, 1, 0);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
     /* Negative features */
-    status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        1,
-        -1
-    );
+    status = fc_ex_sig_normalize_zscore(z_out, states, features, 1, -1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 }
 
 /* Test NaN input handling */
 TEST(test_normalize_nan_input) {
-    const size_t n_symbols  = 3;
-    const int n_features    = 1;
+    const size_t n_symbols = 3;
+    const int n_features   = 1;
 
     fc_welford_state_t states[1];
     states[0].count = 100;
@@ -256,21 +200,15 @@ TEST(test_normalize_nan_input) {
     double features[] = {8.0, NAN, 12.0};
     double z_out[3];
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_ERR_NAN_INPUT);
 }
 
 /* Test state update correctness */
 TEST(test_normalize_update_states_basic) {
-    const size_t n_symbols  = 3;
-    const int n_features    = 2;
+    const size_t n_symbols = 3;
+    const int n_features   = 2;
 
     /* Initialize empty states */
     fc_welford_state_t states[2];
@@ -282,17 +220,15 @@ TEST(test_normalize_update_states_basic) {
      * Symbol 2: [14, 28]
      */
     double features[] = {
-        10.0, 20.0,  /* Symbol 0 */
-        12.0, 24.0,  /* Symbol 1 */
-        14.0, 28.0   /* Symbol 2 */
+        10.0,
+        20.0, /* Symbol 0 */
+        12.0,
+        24.0, /* Symbol 1 */
+        14.0,
+        28.0 /* Symbol 2 */
     };
 
-    fc_status_t status = fc_ex_sig_normalize_update_states(
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_update_states(states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -315,53 +251,38 @@ TEST(test_normalize_update_states_null) {
     double features[1] = {1.0};
 
     /* NULL states */
-    fc_status_t status = fc_ex_sig_normalize_update_states(
-        NULL,
-        features,
-        1,
-        1
-    );
+    fc_status_t status = fc_ex_sig_normalize_update_states(NULL, features, 1, 1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 
     /* NULL features */
-    status = fc_ex_sig_normalize_update_states(
-        states,
-        NULL,
-        1,
-        1
-    );
+    status = fc_ex_sig_normalize_update_states(states, NULL, 1, 1);
     FC_TEST_ASSERT_EQ(status, FC_ERR_INVALID_ARG);
 }
 
 /* Test state update with NaN */
 TEST(test_normalize_update_states_nan) {
-    const size_t n_symbols  = 2;
-    const int n_features    = 1;
+    const size_t n_symbols = 2;
+    const int n_features   = 1;
 
     fc_welford_state_t states[1];
     memset(states, 0, sizeof(states));
 
     double features[] = {10.0, NAN};
 
-    fc_status_t status = fc_ex_sig_normalize_update_states(
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_update_states(states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_ERR_NAN_INPUT);
 }
 
 /* Test large batch normalization (performance-oriented) */
 TEST(test_normalize_large_batch) {
-    const size_t n_symbols  = 1000;
-    const int n_features    = 50;
+    const size_t n_symbols = 1000;
+    const int n_features   = 50;
 
     /* Allocate aligned memory */
     fc_welford_state_t* states = fc_aligned_alloc(n_features * sizeof(fc_welford_state_t), 64);
-    double* features = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
-    double* z_out = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    double* features           = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    double* z_out              = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
 
     FC_TEST_ASSERT(states != NULL);
     FC_TEST_ASSERT(features != NULL);
@@ -381,13 +302,7 @@ TEST(test_normalize_large_batch) {
         }
     }
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 
@@ -408,8 +323,8 @@ TEST(test_normalize_large_batch) {
 
 /* Test numerical accuracy with known statistics */
 TEST(test_normalize_numerical_accuracy) {
-    const size_t n_symbols  = 5;
-    const int n_features    = 1;
+    const size_t n_symbols = 5;
+    const int n_features   = 1;
 
     /* Setup state with known mean and variance */
     fc_welford_state_t states[1];
@@ -421,13 +336,7 @@ TEST(test_normalize_numerical_accuracy) {
     double features[] = {40.0, 45.0, 50.0, 55.0, 60.0};
     double z_out[5];
 
-    fc_status_t status = fc_ex_sig_normalize_zscore(
-        z_out,
-        states,
-        features,
-        n_symbols,
-        n_features
-    );
+    fc_status_t status = fc_ex_sig_normalize_zscore(z_out, states, features, n_symbols, n_features);
 
     FC_TEST_ASSERT_EQ(status, FC_OK);
 

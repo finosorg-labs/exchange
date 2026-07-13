@@ -3,17 +3,17 @@
  * @brief Benchmarks for feature extraction from order book
  */
 
-#include "signal/feature.h"
 #include "bench_framework.h"
-#include "platform.h"
 #include "mem_aligned.h"
+#include "platform.h"
+#include "signal/feature.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
-#define SMALL_BATCH 64
+#define SMALL_BATCH  64
 #define MEDIUM_BATCH 1024
-#define LARGE_BATCH 10000
+#define LARGE_BATCH  10000
 
 typedef struct {
     double* features;
@@ -36,16 +36,16 @@ static void setup_test_data(
     for (size_t i = 0; i < n_symbols; i++) {
         for (int k = 0; k < n_levels; k++) {
             size_t idx = k * n_symbols + i;
-            bid_p[idx] = 100.0 + (double)(i % 100) * 0.1 - (double)k * 0.1;
-            bid_q[idx] = 500.0 + (double)(i % 1000) - (double)k * 100.0;
-            ask_p[idx] = bid_p[idx] + 0.5 + (double)k * 0.1;
-            ask_q[idx] = 500.0 + (double)((n_symbols - i) % 1000) - (double)k * 100.0;
+            bid_p[idx] = 100.0 + (double) (i % 100) * 0.1 - (double) k * 0.1;
+            bid_q[idx] = 500.0 + (double) (i % 1000) - (double) k * 100.0;
+            ask_p[idx] = bid_p[idx] + 0.5 + (double) k * 0.1;
+            ask_q[idx] = 500.0 + (double) ((n_symbols - i) % 1000) - (double) k * 100.0;
         }
     }
 }
 
 static void bench_feature_extract_fn(void* user_data) {
-    bench_feature_data_t* data = (bench_feature_data_t*)user_data;
+    bench_feature_data_t* data = (bench_feature_data_t*) user_data;
     fc_ex_sig_feature_extract(
         data->features,
         data->bid_p,
@@ -58,7 +58,7 @@ static void bench_feature_extract_fn(void* user_data) {
 }
 
 static void bench_feature_extract_core_fn(void* user_data) {
-    bench_feature_data_t* data = (bench_feature_data_t*)user_data;
+    bench_feature_data_t* data = (bench_feature_data_t*) user_data;
     fc_ex_sig_feature_extract_core(
         data->features,
         data->bid_p,
@@ -74,18 +74,19 @@ static void bench_feature_impl(size_t n_symbols, int n_levels, const char* name)
     const size_t n_features = fc_ex_sig_feature_count(n_levels);
     bench_feature_data_t data;
     data.n_symbols = n_symbols;
-    data.n_levels = n_levels;
-    data.features = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
-    data.bid_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
-    data.bid_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
-    data.ask_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
-    data.ask_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.n_levels  = n_levels;
+    data.features  = fc_aligned_alloc(n_symbols * n_features * sizeof(double), 64);
+    data.bid_p     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.bid_q     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.ask_p     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.ask_q     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
 
     setup_test_data(data.bid_p, data.bid_q, data.ask_p, data.ask_q, n_symbols, n_levels);
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
-    config.data_size = n_symbols * n_levels * sizeof(double) * 4 + n_symbols * n_features * sizeof(double);
+    config.name              = name;
+    config.data_size =
+        n_symbols * n_levels * sizeof(double) * 4 + n_symbols * n_features * sizeof(double);
     config.min_iterations = 100;
 
     fc_bench_result_t result;
@@ -102,17 +103,17 @@ static void bench_feature_impl(size_t n_symbols, int n_levels, const char* name)
 static void bench_feature_core_impl(size_t n_symbols, int n_levels, const char* name) {
     bench_feature_data_t data;
     data.n_symbols = n_symbols;
-    data.n_levels = n_levels;
-    data.features = fc_aligned_alloc(n_symbols * 9 * sizeof(double), 64);
-    data.bid_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
-    data.bid_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
-    data.ask_p = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
-    data.ask_q = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.n_levels  = n_levels;
+    data.features  = fc_aligned_alloc(n_symbols * 9 * sizeof(double), 64);
+    data.bid_p     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.bid_q     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.ask_p     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
+    data.ask_q     = fc_aligned_alloc(n_symbols * n_levels * sizeof(double), 64);
 
     setup_test_data(data.bid_p, data.bid_q, data.ask_p, data.ask_q, n_symbols, n_levels);
 
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = name;
+    config.name              = name;
     config.data_size = n_symbols * n_levels * sizeof(double) * 4 + n_symbols * 9 * sizeof(double);
     config.min_iterations = 100;
 

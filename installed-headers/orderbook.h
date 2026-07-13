@@ -68,11 +68,11 @@ typedef struct {
  * Input format for order book aggregation.
  */
 typedef struct {
-    uint32_t symbol_id;       /**< Symbol identifier */
     double price;             /**< Order price */
     double volume;            /**< Order volume */
-    fc_orderbook_side_t side; /**< Order side (bid/ask) */
     int64_t timestamp_ns;     /**< Order timestamp */
+    uint32_t symbol_id;       /**< Symbol identifier */
+    fc_orderbook_side_t side; /**< Order side (bid/ask) */
 } fc_order_t;
 
 /**

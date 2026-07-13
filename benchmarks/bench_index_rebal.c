@@ -9,13 +9,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_INDICES_SMALL 10
+#define NUM_INDICES_SMALL  10
 #define NUM_INDICES_MEDIUM 50
-#define NUM_INDICES_LARGE 100
-#define MAX_CONSTITUENTS 50
+#define NUM_INDICES_LARGE  100
+#define MAX_CONSTITUENTS   50
 
 static double* generate_prices(size_t n_index, int max_constituents) {
-    double* prices = (double*)malloc(n_index * max_constituents * sizeof(double));
+    double* prices = (double*) malloc(n_index * max_constituents * sizeof(double));
     if (!prices)
         return NULL;
 
@@ -27,7 +27,7 @@ static double* generate_prices(size_t n_index, int max_constituents) {
 }
 
 static double* generate_weights(size_t n_index, int max_constituents, const int* n_constituents) {
-    double* weights = (double*)malloc(n_index * max_constituents * sizeof(double));
+    double* weights = (double*) malloc(n_index * max_constituents * sizeof(double));
     if (!weights)
         return NULL;
 
@@ -51,7 +51,7 @@ static double* generate_weights(size_t n_index, int max_constituents, const int*
 }
 
 static double* generate_quantities(size_t n_index, int max_constituents) {
-    double* quantities = (double*)malloc(n_index * max_constituents * sizeof(double));
+    double* quantities = (double*) malloc(n_index * max_constituents * sizeof(double));
     if (!quantities)
         return NULL;
 
@@ -63,7 +63,7 @@ static double* generate_quantities(size_t n_index, int max_constituents) {
 }
 
 static double* generate_tracking_aum(size_t n_index) {
-    double* aum = (double*)malloc(n_index * sizeof(double));
+    double* aum = (double*) malloc(n_index * sizeof(double));
     if (!aum)
         return NULL;
 
@@ -75,7 +75,7 @@ static double* generate_tracking_aum(size_t n_index) {
 }
 
 static int* generate_n_constituents(size_t n_index, int max_constituents) {
-    int* n_const = (int*)malloc(n_index * sizeof(int));
+    int* n_const = (int*) malloc(n_index * sizeof(int));
     if (!n_const)
         return NULL;
 
@@ -99,7 +99,7 @@ typedef struct {
 } bench_data_t;
 
 static void bench_index_nav_only_func(void* user_data) {
-    bench_data_t* data = (bench_data_t*)user_data;
+    bench_data_t* data = (bench_data_t*) user_data;
 
     fc_ex_strat_index_nav(
         data->nav_out,
@@ -115,7 +115,7 @@ static void bench_index_nav_only_func(void* user_data) {
 }
 
 static void bench_index_nav_with_rebalancing_func(void* user_data) {
-    bench_data_t* data = (bench_data_t*)user_data;
+    bench_data_t* data = (bench_data_t*) user_data;
 
     fc_ex_strat_index_nav(
         data->nav_out,
@@ -132,15 +132,15 @@ static void bench_index_nav_with_rebalancing_func(void* user_data) {
 
 static void run_benchmark_for_size(size_t n_index, const char* size_label) {
     bench_data_t data;
-    data.n_index = n_index;
+    data.n_index          = n_index;
     data.max_constituents = MAX_CONSTITUENTS;
-    data.n_constituents = generate_n_constituents(n_index, MAX_CONSTITUENTS);
-    data.prices = generate_prices(n_index, MAX_CONSTITUENTS);
-    data.weights = generate_weights(n_index, MAX_CONSTITUENTS, data.n_constituents);
-    data.current_qty = generate_quantities(n_index, MAX_CONSTITUENTS);
-    data.tracking_aum = generate_tracking_aum(n_index);
-    data.nav_out = (double*)malloc(n_index * sizeof(double));
-    data.rebal_qty_out = (double*)malloc(n_index * MAX_CONSTITUENTS * sizeof(double));
+    data.n_constituents   = generate_n_constituents(n_index, MAX_CONSTITUENTS);
+    data.prices           = generate_prices(n_index, MAX_CONSTITUENTS);
+    data.weights          = generate_weights(n_index, MAX_CONSTITUENTS, data.n_constituents);
+    data.current_qty      = generate_quantities(n_index, MAX_CONSTITUENTS);
+    data.tracking_aum     = generate_tracking_aum(n_index);
+    data.nav_out          = (double*) malloc(n_index * sizeof(double));
+    data.rebal_qty_out    = (double*) malloc(n_index * MAX_CONSTITUENTS * sizeof(double));
 
     if (!data.n_constituents || !data.prices || !data.weights || !data.current_qty ||
         !data.tracking_aum || !data.nav_out || !data.rebal_qty_out) {
@@ -152,25 +152,25 @@ static void run_benchmark_for_size(size_t n_index, const char* size_label) {
 
     snprintf(bench_name, sizeof(bench_name), "index_nav_only_%s", size_label);
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = bench_name;
-    config.data_size = n_index * MAX_CONSTITUENTS * sizeof(double) * 2;
-    config.min_time_ms = 200.0;
+    config.name              = bench_name;
+    config.data_size         = n_index * MAX_CONSTITUENTS * sizeof(double) * 2;
+    config.min_time_ms       = 200.0;
     fc_bench_result_t result;
     fc_bench_run(&config, bench_index_nav_only_func, &data, &result);
     fc_bench_result_print(&result);
 
     snprintf(bench_name, sizeof(bench_name), "index_nav_with_rebalancing_%s", size_label);
-    config.name = bench_name;
+    config.name      = bench_name;
     config.data_size = n_index * MAX_CONSTITUENTS * sizeof(double) * 5;
     fc_bench_run(&config, bench_index_nav_with_rebalancing_func, &data, &result);
     fc_bench_result_print(&result);
 
 cleanup:
-    free((void*)data.n_constituents);
-    free((void*)data.prices);
-    free((void*)data.weights);
-    free((void*)data.current_qty);
-    free((void*)data.tracking_aum);
+    free((void*) data.n_constituents);
+    free((void*) data.prices);
+    free((void*) data.weights);
+    free((void*) data.current_qty);
+    free((void*) data.tracking_aum);
     free(data.nav_out);
     free(data.rebal_qty_out);
 }

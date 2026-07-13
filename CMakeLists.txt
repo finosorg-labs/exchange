@@ -221,6 +221,7 @@ set(EXCHANGE_SOURCES
     exchange-c/strategy-c/latency_arb.c
     exchange-c/strategy-c/index_rebal.c
     exchange-c/strategy-c/delta_hedge.c
+    exchange-c/risk-c/marginal_var.c
 )
 
 # Copy dependency headers to a separate installed-headers directory for distribution

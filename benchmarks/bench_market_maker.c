@@ -9,12 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_SYMBOLS_SMALL 100
+#define NUM_SYMBOLS_SMALL  100
 #define NUM_SYMBOLS_MEDIUM 1000
-#define NUM_SYMBOLS_LARGE 5000
+#define NUM_SYMBOLS_LARGE  5000
 
 static double* generate_mid_prices(size_t n) {
-    double* prices = (double*)malloc(n * sizeof(double));
+    double* prices = (double*) malloc(n * sizeof(double));
     if (!prices)
         return NULL;
 
@@ -25,7 +25,7 @@ static double* generate_mid_prices(size_t n) {
 }
 
 static double* generate_inventories(size_t n) {
-    double* inventories = (double*)malloc(n * sizeof(double));
+    double* inventories = (double*) malloc(n * sizeof(double));
     if (!inventories)
         return NULL;
 
@@ -37,7 +37,7 @@ static double* generate_inventories(size_t n) {
 }
 
 static double* generate_volatilities(size_t n) {
-    double* volatilities = (double*)malloc(n * sizeof(double));
+    double* volatilities = (double*) malloc(n * sizeof(double));
     if (!volatilities)
         return NULL;
 
@@ -49,7 +49,7 @@ static double* generate_volatilities(size_t n) {
 }
 
 static double* generate_arrival_rates(size_t n) {
-    double* arrival_rates = (double*)malloc(n * sizeof(double));
+    double* arrival_rates = (double*) malloc(n * sizeof(double));
     if (!arrival_rates)
         return NULL;
 
@@ -68,49 +68,38 @@ typedef struct {
 } bench_data_t;
 
 static void bench_strat_mm_quotes_func(void* user_data) {
-    bench_data_t* data = (bench_data_t*)user_data;
+    bench_data_t* data = (bench_data_t*) user_data;
 
-    fc_ex_strat_mm_quotes(
-        data->bid_out,
-        data->ask_out,
-        data->reserve_out,
-        &data->params
-    );
+    fc_ex_strat_mm_quotes(data->bid_out, data->ask_out, data->reserve_out, &data->params);
 }
 
 static void bench_strat_mm_reservation_price_func(void* user_data) {
-    bench_data_t* data = (bench_data_t*)user_data;
+    bench_data_t* data = (bench_data_t*) user_data;
 
-    fc_ex_strat_mm_reservation_price(
-        data->reserve_out,
-        &data->params
-    );
+    fc_ex_strat_mm_reservation_price(data->reserve_out, &data->params);
 }
 
 static void bench_strat_mm_optimal_spread_func(void* user_data) {
-    bench_data_t* data = (bench_data_t*)user_data;
+    bench_data_t* data = (bench_data_t*) user_data;
 
-    fc_ex_strat_mm_optimal_spread(
-        data->reserve_out,
-        &data->params
-    );
+    fc_ex_strat_mm_optimal_spread(data->reserve_out, &data->params);
 }
 
 static void run_benchmark_for_size(size_t n, const char* size_label) {
     bench_data_t data;
-    data.params.mid = generate_mid_prices(n);
+    data.params.mid       = generate_mid_prices(n);
     data.params.inventory = generate_inventories(n);
-    data.params.sigma = generate_volatilities(n);
-    data.params.kappa = generate_arrival_rates(n);
-    data.params.gamma = 0.1;
+    data.params.sigma     = generate_volatilities(n);
+    data.params.kappa     = generate_arrival_rates(n);
+    data.params.gamma     = 0.1;
     data.params.t_minus_t = 1.0;
-    data.params.n = n;
-    data.bid_out = (double*)malloc(n * sizeof(double));
-    data.ask_out = (double*)malloc(n * sizeof(double));
-    data.reserve_out = (double*)malloc(n * sizeof(double));
+    data.params.n         = n;
+    data.bid_out          = (double*) malloc(n * sizeof(double));
+    data.ask_out          = (double*) malloc(n * sizeof(double));
+    data.reserve_out      = (double*) malloc(n * sizeof(double));
 
-    if (!data.params.mid || !data.params.inventory || !data.params.sigma ||
-        !data.params.kappa || !data.bid_out || !data.ask_out || !data.reserve_out) {
+    if (!data.params.mid || !data.params.inventory || !data.params.sigma || !data.params.kappa ||
+        !data.bid_out || !data.ask_out || !data.reserve_out) {
         fprintf(stderr, "Failed to allocate memory for benchmark\n");
         goto cleanup;
     }
@@ -119,30 +108,30 @@ static void run_benchmark_for_size(size_t n, const char* size_label) {
 
     snprintf(bench_name, sizeof(bench_name), "strat_mm_quotes_%s", size_label);
     fc_bench_config_t config = FC_BENCH_CONFIG_DEFAULT;
-    config.name = bench_name;
-    config.data_size = n * sizeof(double) * 6;
-    config.min_time_ms = 200.0;
+    config.name              = bench_name;
+    config.data_size         = n * sizeof(double) * 6;
+    config.min_time_ms       = 200.0;
     fc_bench_result_t result;
     fc_bench_run(&config, bench_strat_mm_quotes_func, &data, &result);
     fc_bench_result_print(&result);
 
     snprintf(bench_name, sizeof(bench_name), "strat_mm_reservation_price_%s", size_label);
-    config.name = bench_name;
+    config.name      = bench_name;
     config.data_size = n * sizeof(double) * 4;
     fc_bench_run(&config, bench_strat_mm_reservation_price_func, &data, &result);
     fc_bench_result_print(&result);
 
     snprintf(bench_name, sizeof(bench_name), "strat_mm_optimal_spread_%s", size_label);
-    config.name = bench_name;
+    config.name      = bench_name;
     config.data_size = n * sizeof(double) * 3;
     fc_bench_run(&config, bench_strat_mm_optimal_spread_func, &data, &result);
     fc_bench_result_print(&result);
 
 cleanup:
-    free((void*)data.params.mid);
-    free((void*)data.params.inventory);
-    free((void*)data.params.sigma);
-    free((void*)data.params.kappa);
+    free((void*) data.params.mid);
+    free((void*) data.params.inventory);
+    free((void*) data.params.sigma);
+    free((void*) data.params.kappa);
     free(data.bid_out);
     free(data.ask_out);
     free(data.reserve_out);
