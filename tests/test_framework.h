@@ -19,10 +19,6 @@
 
 #include <platform.h>
 
-/*
- * Test framework configuration
- */
-
 #define FC_TEST_VERSION "1.0.0"
 
 /**
@@ -40,10 +36,6 @@
  */
 #define FC_TEST_MAX_MSG_LEN 512
 
-/*
- * Test result types
- */
-
 /**
  * @brief Test result enumeration
  */
@@ -53,15 +45,7 @@ typedef enum {
     FC_TEST_SKIPPED = 2,
 } fc_test_result_t;
 
-/*
- * Test function pointer type
- */
-
 typedef void (*fc_test_fn)(void);
-
-/*
- * Test statistics
- */
 
 /**
  * @brief Statistics for a test run
@@ -72,6 +56,7 @@ typedef struct {
     int failed;
     int skipped;
     double elapsed_time_ms;
+    double coverage_percent;
 } fc_test_stats_t;
 
 /**
@@ -83,10 +68,6 @@ void fc_test_stats_init(fc_test_stats_t* stats);
  * @brief Print test statistics to stdout
  */
 void fc_test_stats_print(const fc_test_stats_t* stats);
-
-/*
- * Assertion macros
- */
 
 /**
  * @brief Basic assertion that condition is true
@@ -256,10 +237,6 @@ void fc_test_stats_print(const fc_test_stats_t* stats);
         return;                                                                                    \
     } while (0)
 
-/*
- * Internal assertion failure functions
- */
-
 FC_BEGIN_DECLS
 
 /**
@@ -332,7 +309,6 @@ FC_END_DECLS
 /*
  * Test suite management
  */
-
 /**
  * @brief Test suite structure
  */
@@ -341,6 +317,8 @@ typedef struct {
     const char* description;
     fc_test_fn* tests;
     int num_tests;
+    fc_test_fn setup;
+    fc_test_fn teardown;
 } fc_test_suite_t;
 
 /**
@@ -378,11 +356,36 @@ fc_test_stats_t* fc_test_get_stats(void);
 void fc_test_set_verbose(int verbose);
 
 /**
+ * @brief Set per-test setup function
+ *
+ * Called before each test in the suite runs.
+ *
+ * @param fn Setup function pointer
+ */
+void fc_test_set_setup(fc_test_fn fn);
+
+/**
+ * @brief Set per-test teardown function
+ *
+ * Called after each test in the suite completes.
+ *
+ * @param fn Teardown function pointer
+ */
+void fc_test_set_teardown(fc_test_fn fn);
+
+/**
  * @brief Enable coverage reporting
  *
  * @param enable 1 to enable, 0 to disable
  */
 void fc_test_set_coverage(int enable);
+
+/**
+ * @brief Set coverage source path
+ *
+ * @param path Path to source files for coverage analysis (e.g., "src/matrix")
+ */
+void fc_test_set_coverage_path(const char* path);
 
 /**
  * @brief Generate coverage report
@@ -434,6 +437,7 @@ void fc_test_cleanup(void);
     static void suite_name##_##test_name##_wrapper(void) {                                         \
         fc_test_start(#suite_name "/" #test_name);                                                 \
         suite_name##_##test_name##_impl();                                                         \
+        fc_test_end();                                                                             \
     }                                                                                              \
     static void suite_name##_##test_name##_impl(void)
 
@@ -450,10 +454,6 @@ void fc_test_cleanup(void);
         fc_test_register_suite(suite);                                                             \
         fc_test_run_suite(#suite);                                                                 \
     } while (0)
-
-/*
- * Internal test runner state
- */
 
 FC_BEGIN_DECLS
 
@@ -484,32 +484,65 @@ FC_API double fc_test_get_elapsed_ms(void);
 
 FC_END_DECLS
 
-/*
- * Memory tracking utilities
- */
+FC_BEGIN_DECLS
 
 /**
- * @brief Enable memory leak detection
+ * @brief Assert that pointer is properly aligned for SIMD operations
  *
- * Records allocation sites for leak detection.
+ * @param ptr Pointer to check
+ * @param alignment Required alignment (16, 32, or 64 bytes)
  */
-void fc_test_enable_leak_detection(void);
+#define FC_TEST_ASSERT_ALIGNED(ptr, alignment)                                                     \
+    do {                                                                                           \
+        if (!fc_test_is_aligned((ptr), (alignment))) {                                             \
+            fc_test_assert_fail_alignment(                                                         \
+                #ptr " aligned to " #alignment, __FILE__, __LINE__, (ptr), (alignment)             \
+            );                                                                                     \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
 
 /**
- * @brief Check for memory leaks
+ * @brief Check if pointer is aligned
  *
- * @return Number of leaks found
+ * @param ptr Pointer to check
+ * @param alignment Required alignment
+ * @return 1 if aligned, 0 otherwise
  */
-int fc_test_check_leaks(void);
+int fc_test_is_aligned(const void* ptr, size_t alignment);
 
 /**
- * @brief Print memory leak report
+ * @brief Report alignment assertion failure
  */
-void fc_test_print_leak_report(void);
+FC_API void fc_test_assert_fail_alignment(
+    const char* condition,
+    const char* file,
+    int line,
+    const void* ptr,
+    size_t alignment
+);
 
-/*
- * Convenience macros for simpler test syntax
+/**
+ * @brief Override SIMD level for testing dispatch paths
+ *
+ * Allows testing different SIMD implementations by forcing a specific level.
+ * Call with FC_SIMD_SCALAR, FC_SIMD_SSE42, FC_SIMD_AVX2, or FC_SIMD_AVX512.
+ *
+ * @param level SIMD level to force (from simd_detect.h)
+ * @return Previous SIMD level
+ *
+ * @note This is for testing only. Restore the original level after testing.
  */
+int fc_test_set_simd_level(int level);
+
+/**
+ * @brief Get current SIMD level
+ *
+ * @return Current SIMD level
+ */
+int fc_test_get_simd_level(void);
+
+FC_END_DECLS
 
 /**
  * @brief Define a simple test function
@@ -560,10 +593,6 @@ void fc_test_print_leak_report(void);
  * @brief Assert not NULL
  */
 #define ASSERT_NOT_NULL(ptr) FC_TEST_ASSERT((ptr) != NULL)
-
-/*
- * Test memory management helpers
- */
 
 /**
  * @brief Maximum number of tracked allocations per test

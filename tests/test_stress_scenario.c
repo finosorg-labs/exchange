@@ -350,7 +350,7 @@ TEST(test_large_portfolio) {
     double* scenario_pnls   = FC_TEST_MALLOC(double, n_scenarios);
 
     if (!position_values || !shock_matrix || !scenario_pnls) {
-        FC_TEST_ASSERT(0 && "Memory allocation failed");
+        FC_TEST_FAIL("Memory allocation failed");
         return;
     }
 
