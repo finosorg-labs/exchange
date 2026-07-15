@@ -116,10 +116,9 @@ macos:
 	@rm -f $(MACOS_BUILD_DIR)/libfinkit_exchange_static_base.a
 
 go:
-	@echo "==> Building Go module with source (verify compilation)"
-	@CGO_CFLAGS_ALLOW="-m(avx2|avx512f|avx512dq|fma|sse4\.2)" go build ./...
 	@echo "==> Building Go module with lib (verify compilation)"
 	@CGO_CFLAGS_ALLOW="-m(avx2|avx512f|avx512dq|fma|sse4\.2)" go build -tags lib ./...
+	@echo "==> Go build successful (lib mode)"
 
 test: linux
 	@echo "==> Rebuilding with coverage enabled"
@@ -128,8 +127,8 @@ test: linux
 	@echo "==> Running C tests with coverage"
 	@bash scripts/test_coverage.sh $(LINUX_BUILD_DIR)
 	@echo ""
-	@echo "==> Running Go tests"
-	@FC_BUILD_MODE=source CGO_CFLAGS_ALLOW="-m(avx2|avx512f|avx512dq|fma|sse4\.2)" go test -vet=all -race -parallel=4 -v ./...
+	@echo "==> Running Go tests (lib mode)"
+	@CGO_CFLAGS_ALLOW="-m(avx2|avx512f|avx512dq|fma|sse4\.2)" go test -tags lib -vet=all -race -parallel=4 -v ./...
 
 bench:
 	@echo "==> Building benchmarks (Release mode)"
@@ -146,8 +145,8 @@ bench:
 		echo "No C benchmarks found"; \
 	fi
 	@echo ""
-	@echo "==> Running Go benchmarks"
-	@FC_BUILD_MODE=source CGO_CFLAGS_ALLOW="-m(avx2|avx512f|avx512dq|fma|sse4\.2)" go test -bench=. -benchmem ./...
+	@echo "==> Running Go benchmarks (lib mode)"
+	@CGO_CFLAGS_ALLOW="-m(avx2|avx512f|avx512dq|fma|sse4\.2)" go test -tags lib -bench=. -benchmem ./...
 
 format:
 	@echo "==> Formatting C code with clang-format"
@@ -280,9 +279,23 @@ sync:
 			url=$$(git config -f $$gitmodules_file --get "submodule.$$submodule_name.url"); \
 			module_name=$$(basename $$url .git); \
 			cache_path="modules/$$module_name"; \
+			branch=$$(git config -f $$gitmodules_file --get "submodule.$$submodule_name.branch" 2>/dev/null || echo "main"); \
+			need_recurse=false; \
 			\
-			if [ -d "$$cache_path" ] && [ -d "$$cache_path/include" ]; then \
-				echo "  ✓ $$module_name already exists in modules/, skipping"; \
+			if [ -d "$$cache_path/.git" ]; then \
+				echo "  ↻ Checking $$module_name for updates"; \
+				cd $$cache_path; \
+				current_commit=$$(git rev-parse HEAD 2>/dev/null || echo "none"); \
+				git fetch --depth=1 origin $$branch 2>/dev/null || git fetch --depth=1 origin main 2>/dev/null || git fetch --depth=1 origin master 2>/dev/null; \
+				latest_commit=$$(git rev-parse FETCH_HEAD 2>/dev/null); \
+				if [ "$$current_commit" != "$$latest_commit" ]; then \
+					echo "    ⬆ Updating $$module_name"; \
+					git checkout FETCH_HEAD 2>/dev/null; \
+					need_recurse=true; \
+				else \
+					echo "    ✓ $$module_name is up to date"; \
+				fi; \
+				cd - > /dev/null; \
 			else \
 				echo "  ⬇ Cloning $$module_name to modules/ (sparse: build + include)"; \
 				rm -rf $$cache_path; \
@@ -294,12 +307,12 @@ sync:
 				git sparse-checkout init --no-cone && \
 				git sparse-checkout set "build/*" "include/*" ".gitmodules" && \
 				git fetch --depth=1 origin && \
-				branch=$$(git config -f $$gitmodules_file --get "submodule.$$submodule_name.branch" 2>/dev/null || echo "main"); \
 				git checkout $$branch 2>/dev/null || git checkout main 2>/dev/null || git checkout master; \
 				cd - > /dev/null; \
+				need_recurse=true; \
 			fi; \
 			\
-			if [ -f "$$cache_path/.gitmodules" ]; then \
+			if [ "$$need_recurse" = "true" ] && [ -f "$$cache_path/.gitmodules" ]; then \
 				echo "    Found nested submodules in $$module_name"; \
 				clone_submodule "$$cache_path/.gitmodules" ""; \
 			fi; \

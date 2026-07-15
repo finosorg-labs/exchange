@@ -226,8 +226,26 @@ set(EXCHANGE_SOURCES
     exchange-c/risk-c/stress_scenario.c
 )
 
-# Headers are now directly available from submodules via sparse-checkout
-# No need to copy them to a separate directory
+# Copy all dependency headers into include/ directory for distribution
+# This allows published Go packages to work with a single include path
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/platform/include/
+     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include/
+     FILES_MATCHING PATTERN "*.h")
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include/
+     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include/
+     FILES_MATCHING PATTERN "*.h")
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/sort/include/
+     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include/
+     FILES_MATCHING PATTERN "*.h")
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/include/
+     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include/
+     FILES_MATCHING PATTERN "*.h")
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/math/include/
+     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include/
+     FILES_MATCHING PATTERN "*.h")
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/include/
+     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/include/
+     FILES_MATCHING PATTERN "*.h")
 
 # Create object library
 add_library(finkit_exchange OBJECT ${EXCHANGE_SOURCES})

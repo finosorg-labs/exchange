@@ -6,16 +6,9 @@
 package exchange
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/platform/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/ds/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/sort/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/math/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/stats/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/matrix/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/random/include
-#cgo CFLAGS: -I${SRCDIR}/include -I${SRCDIR}/modules/optim/include
-#cgo linux,amd64   LDFLAGS: -L${SRCDIR}/build/linux_amd64 -lfinkit_exchange_static -lm
-#cgo linux,arm64   LDFLAGS: -L${SRCDIR}/build/linux_arm64 -lfinkit_exchange_static -lm
+#cgo CFLAGS: -I${SRCDIR}/include
+#cgo linux,amd64   LDFLAGS: -L${SRCDIR}/build/linux_amd64 -lfinkit_exchange_static -lm -lgcov
+#cgo linux,arm64   LDFLAGS: -L${SRCDIR}/build/linux_arm64 -lfinkit_exchange_static -lm -lgcov
 #cgo darwin,amd64  LDFLAGS: -L${SRCDIR}/build/darwin_amd64 -lfinkit_exchange_static -lm
 #cgo darwin,arm64  LDFLAGS: -L${SRCDIR}/build/darwin_arm64 -lfinkit_exchange_static -lm
 #cgo windows,amd64 LDFLAGS: -L${SRCDIR}/build/windows_amd64 -lfinkit_exchange_static -lm
