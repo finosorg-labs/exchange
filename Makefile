@@ -268,23 +268,45 @@ clean:
 	@go clean -cache
 
 sync:
-	@echo "==> Syncing submodules (one level only)"
-	@echo "==> Step 1: Sync submodule URLs from .gitmodules to .git/config"
-	@git submodule sync
-	@echo "==> Step 2: Ensure submodules are registered in git index"
-	@git config -f .gitmodules --get-regexp '^submodule\..*\.path$$' | while read key path; do \
-		if [ ! -d "$$path/.git" ] && [ ! -f "$$path/.git" ]; then \
-			echo "  Restoring submodule: $$path"; \
-			submodule_name=$$(echo $$key | sed 's/^submodule\.\(.*\)\.path$$/\1/'); \
-			url=$$(git config -f .gitmodules --get "submodule.$$submodule_name.url"); \
-			git submodule add -f "$$url" "$$path" 2>/dev/null || true; \
-		fi; \
-	done
-	@echo "==> Step 3: Reset and clean submodule working trees"
-	@git submodule foreach 'git reset --hard && git clean -fd' || true
-	@echo "==> Step 4: Update all submodules to latest"
-	@git submodule update --init --remote --merge --force
-	@echo "==> Submodules synced successfully"
+	@echo "==> Syncing submodules recursively (partial clone: build + include only)"
+	@echo "==> Downloading to modules/ directory (flat structure)"
+	@mkdir -p modules
+	@bash -c 'set -e; \
+	clone_submodule() { \
+		local gitmodules_file=$$1; \
+		local base_path=$$2; \
+		git config -f $$gitmodules_file --get-regexp "^submodule\..*\.path$$" | while read key path; do \
+			submodule_name=$$(echo $$key | sed "s/^submodule\.\(.*\)\.path$$/\1/"); \
+			url=$$(git config -f $$gitmodules_file --get "submodule.$$submodule_name.url"); \
+			module_name=$$(basename $$url .git); \
+			cache_path="modules/$$module_name"; \
+			\
+			if [ -d "$$cache_path" ] && [ -d "$$cache_path/include" ]; then \
+				echo "  ✓ $$module_name already exists in modules/, skipping"; \
+			else \
+				echo "  ⬇ Cloning $$module_name to modules/ (sparse: build + include)"; \
+				rm -rf $$cache_path; \
+				mkdir -p $$cache_path; \
+				cd $$cache_path && \
+				git init && \
+				git remote add origin $$url && \
+				git config core.sparseCheckout true && \
+				git sparse-checkout init --no-cone && \
+				git sparse-checkout set "build/*" "include/*" ".gitmodules" && \
+				git fetch --depth=1 origin && \
+				branch=$$(git config -f $$gitmodules_file --get "submodule.$$submodule_name.branch" 2>/dev/null || echo "main"); \
+				git checkout $$branch 2>/dev/null || git checkout main 2>/dev/null || git checkout master; \
+				cd - > /dev/null; \
+			fi; \
+			\
+			if [ -f "$$cache_path/.gitmodules" ]; then \
+				echo "    Found nested submodules in $$module_name"; \
+				clone_submodule "$$cache_path/.gitmodules" ""; \
+			fi; \
+		done; \
+	}; \
+	clone_submodule ".gitmodules" ""'
+	@echo "==> Submodules synced successfully (build + include only, recursive)"
 
 help:
 	@echo "exchange Makefile - Build and Test Targets"

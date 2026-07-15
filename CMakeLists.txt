@@ -226,29 +226,8 @@ set(EXCHANGE_SOURCES
     exchange-c/risk-c/stress_scenario.c
 )
 
-# Copy dependency headers to a separate installed-headers directory for distribution
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/platform/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/ds/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/stats/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/math/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/matrix/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/modules/optim/include/
-     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/installed-headers/
-     FILES_MATCHING PATTERN "*.h")
+# Headers are now directly available from submodules via sparse-checkout
+# No need to copy them to a separate directory
 
 # Create object library
 add_library(finkit_exchange OBJECT ${EXCHANGE_SOURCES})
@@ -389,8 +368,28 @@ install(FILES ${MERGED_LIB_PATH}
     DESTINATION lib
 )
 
-# Install self-contained headers (includes all dependencies)
-install(DIRECTORY installed-headers/
+# Install headers from this project and submodules
+install(DIRECTORY include/
+    DESTINATION include/exchange
+    FILES_MATCHING PATTERN "*.h"
+)
+install(DIRECTORY modules/platform/include/
+    DESTINATION include/exchange
+    FILES_MATCHING PATTERN "*.h"
+)
+install(DIRECTORY modules/ds/include/
+    DESTINATION include/exchange
+    FILES_MATCHING PATTERN "*.h"
+)
+install(DIRECTORY modules/stats/include/
+    DESTINATION include/exchange
+    FILES_MATCHING PATTERN "*.h"
+)
+install(DIRECTORY modules/math/include/
+    DESTINATION include/exchange
+    FILES_MATCHING PATTERN "*.h"
+)
+install(DIRECTORY modules/optim/include/
     DESTINATION include/exchange
     FILES_MATCHING PATTERN "*.h"
 )
