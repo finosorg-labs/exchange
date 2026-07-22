@@ -32,17 +32,12 @@ add_executable(exchange_tests
     test_stress_scenario.c
 )
 
-# Link with exchange library
+# Link with merged exchange library (includes all dependencies)
 target_link_libraries(exchange_tests
     PRIVATE
-        finkit_exchange_static_base
-        finkit::stats
-        finkit::optim
-      finkit::sort
-        finkit::ds
-        finkit::math
-        finkit::platform
+        finkit_exchange_static_interface
         m
+        gfortran
 )
 
 target_compile_definitions(exchange_tests PRIVATE
@@ -56,6 +51,9 @@ target_include_directories(exchange_tests
         ${CMAKE_SOURCE_DIR}/modules/platform/include
         ${CMAKE_SOURCE_DIR}/modules/ds/include
         ${CMAKE_SOURCE_DIR}/modules/sort/include
+        ${CMAKE_SOURCE_DIR}/modules/stats/include
+        ${CMAKE_SOURCE_DIR}/modules/math/include
+        ${CMAKE_SOURCE_DIR}/modules/optim/include
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

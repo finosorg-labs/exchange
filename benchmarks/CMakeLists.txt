@@ -14,17 +14,6 @@ target_include_directories(bench_framework
         ${CMAKE_SOURCE_DIR}/modules/platform/include
 )
 
-target_link_libraries(bench_framework
-    PUBLIC
-        finkit_exchange_static_base
-        finkit::stats
-        finkit::optim
-      finkit::sort
-        finkit::ds
-        finkit::math
-        finkit::platform
-)
-
 # Benchmark executable
 add_executable(exchange_benchmarks
     bench_main.c
@@ -54,18 +43,13 @@ add_executable(exchange_benchmarks
     bench_stress_scenario.c
 )
 
-# Link with benchmark framework and exchange library
+# Link with benchmark framework and merged exchange library
 target_link_libraries(exchange_benchmarks
     PRIVATE
         bench_framework
-        finkit_exchange_static_base
-        finkit::stats
-        finkit::optim
-      finkit::sort
-        finkit::ds
-        finkit::math
-        finkit::platform
+        finkit_exchange_static_interface
         m
+        gfortran
 )
 
 target_compile_definitions(exchange_benchmarks PRIVATE
@@ -77,6 +61,11 @@ target_include_directories(exchange_benchmarks
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/modules/platform/include
+        ${CMAKE_SOURCE_DIR}/modules/ds/include
+        ${CMAKE_SOURCE_DIR}/modules/sort/include
+        ${CMAKE_SOURCE_DIR}/modules/stats/include
+        ${CMAKE_SOURCE_DIR}/modules/math/include
+        ${CMAKE_SOURCE_DIR}/modules/optim/include
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

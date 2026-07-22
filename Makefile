@@ -55,6 +55,7 @@ COVERAGE_CONFIG := -G Ninja \
 	-DFC_BUILD_TESTS=ON \
 	-DFC_BUILD_BENCHMARKS=OFF \
 	-DFC_ENABLE_COVERAGE=ON
+	-DFC_SKIP_LIBRARY_MERGE=ON
 
 LINUX_CONFIG := -G Ninja \
 	-B $(LINUX_BUILD_DIR) \
@@ -136,7 +137,8 @@ bench:
 		-G Ninja \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DFC_BUILD_TESTS=OFF \
-		-DFC_BUILD_BENCHMARKS=ON >/dev/null 2>&1 || true
+		-DFC_BUILD_BENCHMARKS=ON \
+		-DFC_SKIP_LIBRARY_MERGE=ON >/dev/null 2>&1 || true
 	@$(CMAKE) --build $(LINUX_BUILD_DIR) --parallel
 	@echo "==> Running C benchmarks"
 	@if [ -f $(LINUX_BUILD_DIR)/benchmarks/exchange_benchmarks ]; then \
@@ -175,7 +177,8 @@ sanitizer-asan:
 		-DFC_BUILD_TESTS=ON \
 		-DFC_BUILD_BENCHMARKS=OFF \
 		-DFC_ENABLE_SANITIZERS=ON \
-		-DFC_SANITIZER_TYPE=address >/dev/null 2>&1 || true
+		-DFC_SANITIZER_TYPE=address \
+		-DFC_SKIP_LIBRARY_MERGE=ON >/dev/null 2>&1 || true
 	@$(CMAKE) --build build/sanitizer-asan --parallel
 	@echo "==> Running AddressSanitizer tests"
 	@cd build/sanitizer-asan && ctest --output-on-failure
@@ -188,7 +191,8 @@ sanitizer-usan:
 		-DFC_BUILD_TESTS=ON \
 		-DFC_BUILD_BENCHMARKS=OFF \
 		-DFC_ENABLE_SANITIZERS=ON \
-		-DFC_SANITIZER_TYPE=undefined >/dev/null 2>&1 || true
+		-DFC_SANITIZER_TYPE=undefined \
+		-DFC_SKIP_LIBRARY_MERGE=ON >/dev/null 2>&1 || true
 	@$(CMAKE) --build build/sanitizer-usan --parallel
 	@echo "==> Running UndefinedBehaviorSanitizer tests"
 	@cd build/sanitizer-usan && ctest --output-on-failure
@@ -201,7 +205,8 @@ sanitizer-tsan:
 		-DFC_BUILD_TESTS=ON \
 		-DFC_BUILD_BENCHMARKS=OFF \
 		-DFC_ENABLE_SANITIZERS=ON \
-		-DFC_SANITIZER_TYPE=thread >/dev/null 2>&1 || true
+		-DFC_SANITIZER_TYPE=thread \
+		-DFC_SKIP_LIBRARY_MERGE=ON >/dev/null 2>&1 || true
 	@$(CMAKE) --build build/sanitizer-tsan --parallel
 	@echo "==> Running ThreadSanitizer tests"
 	@cd build/sanitizer-tsan && ctest --output-on-failure || \
@@ -215,7 +220,8 @@ sanitizer-msan:
 		-DFC_BUILD_TESTS=ON \
 		-DFC_BUILD_BENCHMARKS=OFF \
 		-DFC_ENABLE_SANITIZERS=ON \
-		-DFC_SANITIZER_TYPE=memory >/dev/null 2>&1 || true
+		-DFC_SANITIZER_TYPE=memory \
+		-DFC_SKIP_LIBRARY_MERGE=ON >/dev/null 2>&1 || true
 	@$(CMAKE) --build build/sanitizer-msan --parallel
 	@echo "==> Running MemorySanitizer tests"
 	@cd build/sanitizer-msan && ctest --output-on-failure
